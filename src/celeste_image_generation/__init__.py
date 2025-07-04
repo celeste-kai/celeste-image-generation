@@ -1,37 +1,35 @@
 """
-Celeste Search: A unified search interface for multiple search providers.
+Celeste Image Generation: A unified image generation interface for multiple providers.
 """
 
 from typing import Any
 
-from .base import BaseSearchEngine
+from .base import BaseImageGenerator
 from .core.enums import Provider
-from .core.types import SearchResult
+from .core.types import GeneratedImage
 
 __version__ = "0.1.0"
 
 SUPPORTED_PROVIDERS = [
     "google",
-    "github-repository",
-    "arxiv",
-    "serper",
-    "serpapi",
-    "duckduckgo",
-    "bing",
-    "brave",
+    "stabilityai",
+    "local",
+    "openai",
+    "huggingface",
+    "luma",
 ]
 
 
-def create_search_engine(provider: str, **kwargs: Any) -> "BaseSearchEngine":
+def create_image_generator(provider: str, **kwargs: Any) -> "BaseImageGenerator":
     """
-    Factory function to create a search engine instance based on the provider.
+    Factory function to create an image generator instance based on the provider.
 
     Args:
-        provider: The search provider to use (string or Provider enum).
-        **kwargs: Additional arguments to pass to the search engine constructor.
+        provider: The image generator provider to use (string or Provider enum).
+        **kwargs: Additional arguments to pass to the image generator constructor.
 
     Returns:
-        An instance of a search engine.
+        An instance of an image generator
     """
     # Convert Provider enum to string if needed
     if isinstance(provider, Provider):
@@ -40,36 +38,43 @@ def create_search_engine(provider: str, **kwargs: Any) -> "BaseSearchEngine":
     if provider not in SUPPORTED_PROVIDERS:
         raise ValueError(f"Unsupported provider: {provider}")
 
-    if provider == "brave":
-        from .providers.brave import BraveSearch
+    if provider == "google":
+        from .providers.google import GoogleImageGenerator
 
-        return BraveSearch(**kwargs)
-    elif provider == "serpapi":
-        from .providers.serpapi import SerpAPISearch
+        return GoogleImageGenerator(**kwargs)
+    
+    if provider == "stabilityai":
+        from .providers.stability_ai import StabilityAIImageGenerator
 
-        return SerpAPISearch(**kwargs)
-    elif provider == "github-repository":
-        from .providers.github import GitHubRepositorySearch
+        return StabilityAIImageGenerator(**kwargs)
+    
+    if provider == "local":
+        from .providers.local import LocalImageGenerator
 
-        return GitHubRepositorySearch(**kwargs)
-    elif provider == "google":
-        raise NotImplementedError(f"Provider {provider} not implemented yet")
-    elif provider == "arxiv":
-        raise NotImplementedError(f"Provider {provider} not implemented yet")
-    elif provider == "serper":
-        raise NotImplementedError(f"Provider {provider} not implemented yet")
-    elif provider == "duckduckgo":
-        raise NotImplementedError(f"Provider {provider} not implemented yet")
-    elif provider == "bing":
-        raise NotImplementedError(f"Provider {provider} not implemented yet")
+        return LocalImageGenerator(**kwargs)
+    
+    if provider == "openai":
+        from .providers.openai import OpenAIImageGenerator
+
+        return OpenAIImageGenerator(**kwargs)
+    
+    if provider == "huggingface":
+        from .providers.huggingface import HuggingFaceImageGenerator
+
+        return HuggingFaceImageGenerator(**kwargs)
+    
+    if provider == "luma":
+        from .providers.luma import LumaImageGenerator
+
+        return LumaImageGenerator(**kwargs)
 
     raise ValueError(f"Provider {provider} not implemented")
 
 
 __all__ = [
-    "create_search_engine",
-    "BaseSearchEngine",
+    "create_image_generator",
+    "BaseImageGenerator",
     "Provider",
-    "SearchResult",
+    "GeneratedImage",
     "__version__",
 ]

@@ -1,0 +1,23 @@
+[project]
+name = "celeste-image-generation"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "google-genai>=0.1.0",
+    "python-dotenv>=1.1.1",
+    "streamlit",
+    "torch",
+    "diffusers",
+    "transformers",
+    "accelerate",
+    "Pillow",
+    "aiohttp>=3.9.0",
+    "ftfy",
+    "av",
+    "safetensors>=0.4.0",
+    "huggingface-hub>=0.19.0",
+    "opencv-python",
+    "notebook>=7.4.3",
+    "sentencepiece",
+]
