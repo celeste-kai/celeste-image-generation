@@ -25,10 +25,6 @@ class HuggingFaceImageGenerator(BaseImageGenerator):
     async def generate_image(self, prompt: ImagePrompt, **kwargs: Any) -> List[GeneratedImage]:
         """
         Generate images using Hugging Face Inference API.
-        
-        Args:
-            prompt: The image prompt
-            **kwargs: Additional parameters supported by the model
         """
         headers = {
             "Authorization": f"Bearer {self.api_key}",

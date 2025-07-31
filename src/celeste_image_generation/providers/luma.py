@@ -24,15 +24,6 @@ class LumaImageGenerator(BaseImageGenerator):
     async def generate_image(self, prompt: ImagePrompt, **kwargs: Any) -> List[GeneratedImage]:
         """
         Generate images using Luma's Dream Machine API.
-        
-        Args:
-            prompt: The image prompt
-            **kwargs: Additional parameters:
-                - aspect_ratio: "1:1", "3:4", "4:3", "9:16", "16:9" (default), "9:21", "21:9"
-                - image_ref: List of image reference URLs (up to 4)
-                - style_ref: Style reference URL
-                - character_ref: Character reference URL
-                - modify_image_ref: URL of image to modify
         """
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -66,7 +57,7 @@ class LumaImageGenerator(BaseImageGenerator):
             async with session.post(
                 f"{self.base_url}/generations/image",
                 headers=headers,
-                json=data
+                json=data,
             ) as response:
                 if response.status != 201:
                     error_text = await response.text()

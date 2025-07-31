@@ -20,15 +20,6 @@ class OpenAIImageGenerator(BaseImageGenerator):
     async def generate_image(self, prompt: ImagePrompt, **kwargs: Any) -> List[GeneratedImage]:
         """
         Generate images using OpenAI's image generation API.
-        
-        Args:
-            prompt: The image prompt
-            **kwargs: Additional parameters:
-                - size: Image size (1024x1024, 1024x1792, 1792x1024 for DALL-E 3)
-                - quality: "standard" or "hd" (DALL-E 3 only)
-                - style: "vivid" or "natural" (DALL-E 3 only)
-                - n: Number of images to generate (1-10 for DALL-E 2, only 1 for DALL-E 3)
-                - response_format: "url" or "b64_json"
         """
         # Set defaults based on model
         if self.model_name == OpenAIModel.DALL_E_3.value:
