@@ -15,9 +15,29 @@ class GoogleImageGenerator(BaseImageGenerator):
         self.model_name = model
 
     async def generate_image(self, prompt: ImagePrompt, **kwargs: Any) -> List[GeneratedImage]:
+        """Generate images using Google's Imagen models."""
+
+        # Allow users to request multiple images via common parameter names
+        num_images = (
+            kwargs.get("n")
+            or kwargs.get("num_images")
+            or kwargs.get("number_of_images")
+        )
+
+        config = None
+        if num_images is not None:
+            try:
+                num_images = int(num_images)
+            except (TypeError, ValueError):
+                raise ValueError("num_images must be an integer")
+
+            # Build the generation config with desired number of images
+            config = genai.types.GenerateImagesConfig(number_of_images=num_images)
+
         response = await self.client.aio.models.generate_images(
             model=self.model_name,
             prompt=prompt.content,
+            config=config,
         )
         
         return [
