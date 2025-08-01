@@ -30,6 +30,15 @@ async def main() -> None:
                 index=0
             )
             selected_model = selected_model_enum.value
+
+            # Allow selecting the number of images to generate
+            num_images = st.number_input(
+                "Number of Images",
+                min_value=1,
+                max_value=4,
+                value=1,
+                step=1,
+            )
         elif provider == Provider.STABILITYAI:
             model_options = list(StabilityModel)
             selected_model_enum = st.selectbox(
@@ -181,6 +190,8 @@ async def main() -> None:
                 
                 # Prepare kwargs based on provider
                 kwargs = {}
+                if provider == Provider.GOOGLE:
+                    kwargs["n"] = num_images
                 if provider == Provider.OPENAI and selected_model == OpenAIModel.DALL_E_3.value:
                     kwargs["size"] = size
                     kwargs["quality"] = quality
