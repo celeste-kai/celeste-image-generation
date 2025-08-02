@@ -3,7 +3,17 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from celeste_image_generation import create_image_generator
-from celeste_image_generation.core.enums import Provider, GoogleModel, StabilityModel, LocalModel, OpenAIModel, HuggingFaceModel, LumaModel, STABILITY_CREDITS
+from celeste_image_generation.core.enums import (
+    Provider,
+    GoogleModel,
+    StabilityModel,
+    LocalModel,
+    OpenAIModel,
+    HuggingFaceModel,
+    LumaModel,
+    XAIModel,
+    STABILITY_CREDITS,
+)
 from celeste_image_generation.core.types import ImagePrompt
 
 load_dotenv()
@@ -17,7 +27,15 @@ async def main() -> None:
 
     with st.sidebar:
         st.header("Configuration")
-        provider_options = ["google", "stabilityai", "local", "openai", "huggingface", "luma"]
+        provider_options = [
+            "google",
+            "stabilityai",
+            "local",
+            "openai",
+            "huggingface",
+            "luma",
+            "xai",
+        ]
         provider_name = st.selectbox("Provider", options=provider_options, index=0)
         provider = Provider(provider_name)
 
@@ -173,6 +191,25 @@ async def main() -> None:
             # st.text_input("Style Reference URL", key="luma_style_ref")
             # st.text_input("Character Reference URL", key="luma_char_ref")
             # st.text_input("Image to Modify URL", key="luma_modify_ref")
+        elif provider == Provider.XAI:
+            model_options = list(XAIModel)
+            selected_model_enum = st.selectbox(
+                "Model",
+                options=model_options,
+                format_func=lambda x: x.value,
+                index=0,
+            )
+            selected_model = selected_model_enum.value
+
+            st.info("🧠 xAI Grok 2 Image")
+
+            num_images = st.number_input(
+                "Number of Images",
+                min_value=1,
+                max_value=4,
+                value=1,
+                step=1,
+            )
         else:
             selected_model = None
 
@@ -190,7 +227,7 @@ async def main() -> None:
                 
                 # Prepare kwargs based on provider
                 kwargs = {}
-                if provider == Provider.GOOGLE:
+                if provider in (Provider.GOOGLE, Provider.XAI):
                     kwargs["n"] = num_images
                 if provider == Provider.OPENAI and selected_model == OpenAIModel.DALL_E_3.value:
                     kwargs["size"] = size
