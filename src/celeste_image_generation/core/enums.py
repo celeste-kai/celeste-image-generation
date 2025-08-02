@@ -8,6 +8,7 @@ class Provider(Enum):
     LOCAL = "local"
     HUGGINGFACE = "huggingface"
     LUMA = "luma"
+    XAI = "xai"
 
 
 class GoogleModel(Enum):
@@ -91,6 +92,11 @@ class LumaModel(Enum):
     """Luma Labs Dream Machine model enumeration."""
     PHOTON_1 = "photon-1"  # Default model for image generation
     PHOTON_FLASH_1 = "photon-flash-1"  # Faster model for image generation
+
+
+class XAIModel(Enum):
+    """xAI image model enumeration."""
+    GROK_2_IMAGE = "grok-2-image"
 
 
 class LocalModel(Enum):
