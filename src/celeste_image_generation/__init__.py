@@ -17,6 +17,7 @@ SUPPORTED_PROVIDERS = [
     "openai",
     "huggingface",
     "luma",
+    "xai",
 ]
 
 
@@ -62,11 +63,16 @@ def create_image_generator(provider: str, **kwargs: Any) -> "BaseImageGenerator"
         from .providers.huggingface import HuggingFaceImageGenerator
 
         return HuggingFaceImageGenerator(**kwargs)
-    
+
     if provider == "luma":
         from .providers.luma import LumaImageGenerator
 
         return LumaImageGenerator(**kwargs)
+
+    if provider == "xai":
+        from .providers.xai import XAIImageGenerator
+
+        return XAIImageGenerator(**kwargs)
 
     raise ValueError(f"Provider {provider} not implemented")
 
