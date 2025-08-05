@@ -24,14 +24,14 @@ class GoogleModel(Enum):
 
 class StabilityModel(Enum):
     """Stability AI model enumeration."""
-    
+
     # New models (v2beta API)
     ULTRA = "ultra"  # Stable Image Ultra
     SD3_5_LARGE = "sd3.5-large"  # Stable Diffusion 3.5 Large
     SD3_5_LARGE_TURBO = "sd3.5-large-turbo"  # Stable Diffusion 3.5 Large Turbo
     SD3_5_MEDIUM = "sd3.5-medium"  # Stable Diffusion 3.5 Medium
     CORE = "core"  # Stable Image Core
-    
+
     # Legacy models (v1 API)
     SDXL_1_0 = "stable-diffusion-xl-1024-v1-0"  # SDXL 1.0
     SD_1_6 = "stable-diffusion-v1-6"  # SD 1.6
@@ -51,62 +51,53 @@ STABILITY_CREDITS = {
 
 class OpenAIModel(Enum):
     """OpenAI model enumeration."""
-    
+
     # Current models
     DALL_E_3 = "dall-e-3"
     DALL_E_2 = "dall-e-2"
-    
+
     # Future model (based on your findings)
     GPT_IMAGE_1 = "gpt-image-1"
 
 
 class HuggingFaceModel(Enum):
     """Hugging Face Inference API model enumeration."""
-    
+
     # FLUX models
     FLUX_SCHNELL = "black-forest-labs/FLUX.1-schnell"
     FLUX_DEV = "black-forest-labs/FLUX.1-dev"
-    
+    FLUX_KREA_DEV = "black-forest-labs/FLUX.1-Krea-dev"
+
     # Stable Diffusion XL
     SDXL_BASE = "stabilityai/stable-diffusion-xl-base-1.0"
-    SDXL_TURBO = "stabilityai/sdxl-turbo"
-    
+
     # Stable Diffusion 3
     SD3_MEDIUM = "stabilityai/stable-diffusion-3-medium-diffusers"
-    
-    # Other popular models
-    PLAYGROUND_V2_5 = "playgroundai/playground-v2.5-1024px-aesthetic"
-    KANDINSKY_3 = "kandinsky-community/kandinsky-3"
-    WUERSTCHEN = "warp-ai/wuerstchen"
-    
-    # Fast models
-    SDXL_LIGHTNING = "ByteDance/SDXL-Lightning"
-    LCM_SDXL = "latent-consistency/lcm-sdxl"
-    
-    # Specialized models
-    DALLE_3_XL = "openskyml/dalle-3-xl"  # Community DALL-E 3 style model
-    ANIME_DIFFUSION = "Ojimi/anime-kawai-diffusion"
+
+    # Qwen models
+    QWEN_IMAGE = "Qwen/Qwen-Image"
 
 
 class LumaModel(Enum):
     """Luma Labs Dream Machine model enumeration."""
+
     PHOTON_1 = "photon-1"  # Default model for image generation
     PHOTON_FLASH_1 = "photon-flash-1"  # Faster model for image generation
 
 
 class XAIModel(Enum):
     """xAI image model enumeration."""
+
     GROK_2_IMAGE = "grok-2-image"
 
 
 class LocalModel(Enum):
     """Local model enumeration for open source models."""
-    
+
     # FLUX models
     FLUX_SCHNELL = "black-forest-labs/FLUX.1-schnell"
     FLUX_DEV = "black-forest-labs/FLUX.1-dev"
-    NUNCHAKU_FLUX_KREA_DEV = "nunchaku-tech/nunchaku-flux.1-krea-dev"
-    
+
     # SDXL variants
     SDXL_TURBO = "stabilityai/sdxl-turbo"
     SDXL_LIGHTNING = "ByteDance/SDXL-Lightning"

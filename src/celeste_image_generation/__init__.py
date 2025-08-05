@@ -10,16 +10,6 @@ from .core.types import GeneratedImage
 
 __version__ = "0.1.0"
 
-SUPPORTED_PROVIDERS = [
-    "google",
-    "stabilityai",
-    "local",
-    "openai",
-    "huggingface",
-    "luma",
-    "xai",
-]
-
 
 def create_image_generator(provider: str, **kwargs: Any) -> "BaseImageGenerator":
     """
@@ -36,45 +26,29 @@ def create_image_generator(provider: str, **kwargs: Any) -> "BaseImageGenerator"
     if isinstance(provider, Provider):
         provider = provider.value
 
-    if provider not in SUPPORTED_PROVIDERS:
-        raise ValueError(f"Unsupported provider: {provider}")
+    # Lazy import mapping
+    provider_mapping = {
+        "google": ("providers.google", "GoogleImageGenerator"),
+        "stabilityai": ("providers.stability_ai", "StabilityAIImageGenerator"),
+        "local": ("providers.local", "LocalImageGenerator"),
+        "openai": ("providers.openai", "OpenAIImageGenerator"),
+        "huggingface": ("providers.huggingface", "HuggingFaceImageGenerator"),
+        "luma": ("providers.luma", "LumaImageGenerator"),
+        "xai": ("providers.xai", "XAIImageGenerator"),
+    }
 
-    if provider == "google":
-        from .providers.google import GoogleImageGenerator
+    if provider not in provider_mapping:
+        raise ValueError(
+            f"Unsupported provider: {provider}. Supported providers: {list(provider_mapping.keys())}"
+        )
 
-        return GoogleImageGenerator(**kwargs)
-    
-    if provider == "stabilityai":
-        from .providers.stability_ai import StabilityAIImageGenerator
+    module_path, class_name = provider_mapping[provider]
+    module = __import__(
+        f"celeste_image_generation.{module_path}", fromlist=[class_name]
+    )
+    generator_class = getattr(module, class_name)
 
-        return StabilityAIImageGenerator(**kwargs)
-    
-    if provider == "local":
-        from .providers.local import LocalImageGenerator
-
-        return LocalImageGenerator(**kwargs)
-    
-    if provider == "openai":
-        from .providers.openai import OpenAIImageGenerator
-
-        return OpenAIImageGenerator(**kwargs)
-    
-    if provider == "huggingface":
-        from .providers.huggingface import HuggingFaceImageGenerator
-
-        return HuggingFaceImageGenerator(**kwargs)
-
-    if provider == "luma":
-        from .providers.luma import LumaImageGenerator
-
-        return LumaImageGenerator(**kwargs)
-
-    if provider == "xai":
-        from .providers.xai import XAIImageGenerator
-
-        return XAIImageGenerator(**kwargs)
-
-    raise ValueError(f"Provider {provider} not implemented")
+    return generator_class(**kwargs)
 
 
 __all__ = [
