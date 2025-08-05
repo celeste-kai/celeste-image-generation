@@ -105,6 +105,7 @@ class LocalModel(Enum):
     # FLUX models
     FLUX_SCHNELL = "black-forest-labs/FLUX.1-schnell"
     FLUX_DEV = "black-forest-labs/FLUX.1-dev"
+    NUNCHAKU_FLUX_KREA_DEV = "nunchaku-tech/nunchaku-flux.1-krea-dev"
     
     # SDXL variants
     SDXL_TURBO = "stabilityai/sdxl-turbo"

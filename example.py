@@ -65,6 +65,7 @@ async def main() -> None:
             # Display model info
             model_info = {
                 LocalModel.FLUX_SCHNELL: "🚀 4 steps, state-of-the-art quality (23.8 GB)",
+                LocalModel.NUNCHAKU_FLUX_KREA_DEV: "🎨 Nunchaku FLUX Krea Dev (~24 GB)",
                 LocalModel.SDXL_TURBO: "⚡ 1-4 steps, very fast (~6.5 GB)",
                 LocalModel.SDXL_LIGHTNING: "⚡ 1-4 steps, ByteDance optimized (6.94 GB)",
                 LocalModel.SDXL_BASE: "🎨 50 steps, high quality (6.94 GB)",
