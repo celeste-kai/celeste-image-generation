@@ -14,7 +14,9 @@ class GoogleImageGenerator(BaseImageGenerator):
         self.client = genai.Client(api_key=GOOGLE_API_KEY)
         self.model_name = model
 
-    async def generate_image(self, prompt: ImagePrompt, **kwargs: Any) -> List[GeneratedImage]:
+    async def generate_image(
+        self, prompt: ImagePrompt, **kwargs: Any
+    ) -> List[GeneratedImage]:
         """Generate images using Google's Imagen models."""
 
         # Allow users to request multiple images via common parameter names
@@ -39,8 +41,10 @@ class GoogleImageGenerator(BaseImageGenerator):
             prompt=prompt.content,
             config=config,
         )
-        
+
         return [
-            GeneratedImage(image=img.image.image_bytes, metadata={"model": self.model_name})
+            GeneratedImage(
+                image=img.image.image_bytes, metadata={"model": self.model_name}
+            )
             for img in response.generated_images
         ]

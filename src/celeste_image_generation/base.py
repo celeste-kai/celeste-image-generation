@@ -12,18 +12,20 @@ class BaseImageGenerator(ABC):
     It defines the standard interface for interacting with different image providers.
     """
 
-    @abstractmethod
     def __init__(self, **kwargs: Any) -> None:
         """
         Initializes the client, loading credentials from the environment.
         Provider-specific arguments can be passed via kwargs.
         """
+        # Base implementation - subclasses can call super().__init__(**kwargs)
+        # to ensure any future base class initialization is handled
         pass
 
     @abstractmethod
-    async def generate_image(self, prompt: ImagePrompt, **kwargs: Any) -> List[GeneratedImage]:
+    async def generate_image(
+        self, prompt: ImagePrompt, **kwargs: Any
+    ) -> List[GeneratedImage]:
         """
         Submits a request to start an image generation job.
         """
         pass
-
