@@ -1,6 +1,5 @@
 import asyncio
-import time
-from typing import Any, List, Optional
+from typing import Any, List
 import aiohttp
 
 from celeste_image_generation.base import BaseImageGenerator
