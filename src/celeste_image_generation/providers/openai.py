@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List
 import base64
 import aiohttp
 

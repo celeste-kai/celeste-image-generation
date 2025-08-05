@@ -1,6 +1,6 @@
 import base64
 import io
-from typing import Any, List, Optional
+from typing import Any, List
 import aiohttp
 from PIL import Image
 
