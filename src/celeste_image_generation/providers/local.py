@@ -2,19 +2,22 @@ import io
 from typing import Any, List
 
 import torch
+from celeste_core import ImageArtifact
+from celeste_core.base.image_generator import BaseImageGenerator
+from celeste_core.enums.capability import Capability
+from celeste_core.models.registry import supports
 from diffusers import DiffusionPipeline
-
-from celeste_image_generation.base import BaseImageGenerator
-from celeste_image_generation.core.enums import LocalModel
-from celeste_image_generation.core.types import GeneratedImage, ImagePrompt
 
 
 class LocalImageGenerator(BaseImageGenerator):
-    """Local image generator using Hugging Face diffusers. Auto-detects CUDA > MPS > CPU."""
+    """Local image generator using Hugging Face diffusers.
 
-    def __init__(self, model: str = LocalModel.SDXL_TURBO.value, **kwargs: Any) -> None:
+    Auto-detects CUDA > MPS > CPU.
+    """
+
+    def __init__(self, model: str = "stabilityai/sdxl-turbo", **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.model_name = model.value if hasattr(model, "value") else model
+        self.model_name = model
         self.device = (
             "cuda"
             if torch.cuda.is_available()
@@ -41,18 +44,20 @@ class LocalImageGenerator(BaseImageGenerator):
             self.pipeline.enable_model_cpu_offload()
         else:
             self.pipeline = self.pipeline.to(self.device)
+        if not supports(self.model_name, Capability.IMAGE_GENERATION):
+            raise ValueError(
+                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
+            )
 
-    async def generate_image(
-        self, prompt: ImagePrompt, **kwargs: Any
-    ) -> List[GeneratedImage]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         # Generate images
         with torch.no_grad():
-            images = self.pipeline(prompt.content, **kwargs).images
+            images = self.pipeline(prompt, **kwargs).images
 
         # Convert to bytes
         return [
-            GeneratedImage(
-                image=(
+            ImageArtifact(
+                data=(
                     img_bytes := io.BytesIO(),
                     img.save(img_bytes, format="PNG"),
                     img_bytes.getvalue(),
@@ -62,7 +67,7 @@ class LocalImageGenerator(BaseImageGenerator):
             for img in images
         ]
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup resources when the generator is destroyed."""
         if hasattr(self, "pipeline"):
             # Clear CUDA cache if using CUDA

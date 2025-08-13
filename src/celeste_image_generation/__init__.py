@@ -4,14 +4,27 @@ Celeste Image Generation: A unified image generation interface for multiple prov
 
 from typing import Any
 
-from .base import BaseImageGenerator
-from .core.enums import Provider
-from .core.types import GeneratedImage
+from celeste_core import ImageArtifact, Provider
+from celeste_core.base.image_generator import BaseImageGenerator
+from celeste_core.config.settings import settings
 
 __version__ = "0.1.0"
 
 
-def create_image_generator(provider: str, **kwargs: Any) -> "BaseImageGenerator":
+SUPPORTED_PROVIDERS: set[Provider] = {
+    Provider.GOOGLE,
+    Provider.STABILITYAI,
+    Provider.LOCAL,
+    Provider.OPENAI,
+    Provider.HUGGINGFACE,
+    Provider.LUMA,
+    Provider.XAI,
+}
+
+
+def create_image_generator(
+    provider: str | Provider, **kwargs: Any
+) -> "BaseImageGenerator":
     """
     Factory function to create an image generator instance based on the provider.
 
@@ -22,27 +35,36 @@ def create_image_generator(provider: str, **kwargs: Any) -> "BaseImageGenerator"
     Returns:
         An instance of an image generator
     """
-    # Convert Provider enum to string if needed
-    if isinstance(provider, Provider):
-        provider = provider.value
+    # Normalize to enum
+    provider_enum: Provider = (
+        provider if isinstance(provider, Provider) else Provider(provider)
+    )
 
-    # Lazy import mapping
+    # Mapping keyed by Provider enum
     provider_mapping = {
-        "google": ("providers.google", "GoogleImageGenerator"),
-        "stabilityai": ("providers.stability_ai", "StabilityAIImageGenerator"),
-        "local": ("providers.local", "LocalImageGenerator"),
-        "openai": ("providers.openai", "OpenAIImageGenerator"),
-        "huggingface": ("providers.huggingface", "HuggingFaceImageGenerator"),
-        "luma": ("providers.luma", "LumaImageGenerator"),
-        "xai": ("providers.xai", "XAIImageGenerator"),
+        Provider.GOOGLE: ("providers.google", "GoogleImageGenerator"),
+        Provider.STABILITYAI: ("providers.stability_ai", "StabilityAIImageGenerator"),
+        Provider.LOCAL: ("providers.local", "LocalImageGenerator"),
+        Provider.OPENAI: ("providers.openai", "OpenAIImageGenerator"),
+        Provider.HUGGINGFACE: ("providers.huggingface", "HuggingFaceImageGenerator"),
+        Provider.LUMA: ("providers.luma", "LumaImageGenerator"),
+        Provider.XAI: ("providers.xai", "XAIImageGenerator"),
     }
 
-    if provider not in provider_mapping:
+    if (
+        provider_enum not in SUPPORTED_PROVIDERS
+        or provider_enum not in provider_mapping
+    ):
+        supported = [p.value for p in provider_mapping.keys()]
         raise ValueError(
-            f"Unsupported provider: {provider}. Supported providers: {list(provider_mapping.keys())}"
+            f"Unsupported provider: {provider_enum.value}. "
+            f"Supported providers: {supported}"
         )
 
-    module_path, class_name = provider_mapping[provider]
+    # Validate environment for the chosen provider
+    settings.validate_for_provider(provider_enum.value)
+
+    module_path, class_name = provider_mapping[provider_enum]
     module = __import__(
         f"celeste_image_generation.{module_path}", fromlist=[class_name]
     )
@@ -55,6 +77,6 @@ __all__ = [
     "create_image_generator",
     "BaseImageGenerator",
     "Provider",
-    "GeneratedImage",
+    "ImageArtifact",
     "__version__",
 ]

@@ -1,30 +1,33 @@
+import base64
 from typing import Any, List
-import aiohttp
 
-from celeste_image_generation.base import BaseImageGenerator
-from celeste_image_generation.core.config import OPENAI_API_KEY
-from celeste_image_generation.core.enums import OpenAIModel
-from celeste_image_generation.core.types import GeneratedImage, ImagePrompt
-from celeste_image_generation.core.utils import decode_image_response
+import aiohttp
+from celeste_core import ImageArtifact
+from celeste_core.base.image_generator import BaseImageGenerator
+from celeste_core.config.settings import settings
+from celeste_core.enums.capability import Capability
+from celeste_core.models.registry import supports
 
 
 class OpenAIImageGenerator(BaseImageGenerator):
     """OpenAI image generator using DALL-E models."""
 
-    def __init__(self, model: str = OpenAIModel.DALL_E_3.value, **kwargs: Any) -> None:
+    def __init__(self, model: str = "dall-e-3", **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.api_key = OPENAI_API_KEY
-        self.model_name = model.value if hasattr(model, "value") else model
+        self.api_key = settings.openai.api_key
+        self.model_name = model
         self.base_url = "https://api.openai.com/v1"
+        if not supports(self.model_name, Capability.IMAGE_GENERATION):
+            raise ValueError(
+                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
+            )
 
-    async def generate_image(
-        self, prompt: ImagePrompt, **kwargs: Any
-    ) -> List[GeneratedImage]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         """
         Generate images using OpenAI's image generation API.
         """
         # Set defaults based on model
-        if self.model_name == OpenAIModel.DALL_E_3.value:
+        if self.model_name == "dall-e-3":
             size = kwargs.get("size", "1024x1024")
             quality = kwargs.get("quality", "standard")
             style = kwargs.get("style", "vivid")
@@ -40,17 +43,17 @@ class OpenAIImageGenerator(BaseImageGenerator):
         # Build request
         data = {
             "model": self.model_name,
-            "prompt": prompt.content,
+            "prompt": prompt,
             "size": size,
             "n": n,
         }
 
         # Only add response_format for DALL-E models (not gpt-image-1)
-        if self.model_name in [OpenAIModel.DALL_E_2.value, OpenAIModel.DALL_E_3.value]:
+        if self.model_name in ["dall-e-2", "dall-e-3"]:
             data["response_format"] = response_format
 
         # Add DALL-E 3 specific parameters
-        if self.model_name == OpenAIModel.DALL_E_3.value:
+        if self.model_name == "dall-e-3":
             if quality:
                 data["quality"] = quality
             if style:
@@ -73,27 +76,42 @@ class OpenAIImageGenerator(BaseImageGenerator):
 
                 result = await response.json()
 
-                images = []
+                images: List[ImageArtifact] = []
                 for img_data in result["data"]:
-                    # Use shared helper for decoding
-                    try:
-                        image_bytes = await decode_image_response(img_data, session)
-                    except ValueError:
-                        # For gpt-image-1 or other models with different response structure
-                        if "image" in img_data:
-                            # Create a new dict with expected format
-                            if img_data["image"].startswith("http"):
-                                image_bytes = await decode_image_response(
-                                    {"url": img_data["image"]}, session
+                    # Inline decode (b64_json or url).
+                    # Also support alt field 'image' used by some models
+                    image_bytes: bytes
+                    if "b64_json" in img_data:
+                        image_bytes = base64.b64decode(img_data["b64_json"])
+                    elif "url" in img_data:
+                        async with session.get(img_data["url"]) as img_response:
+                            if img_response.status != 200:
+                                raise Exception(
+                                    f"Failed to download image from URL: "
+                                    f"{img_data['url']}"
                                 )
-                            else:
-                                image_bytes = await decode_image_response(
-                                    {"b64_json": img_data["image"]}, session
-                                )
+                            image_bytes = await img_response.read()
+                    elif "image" in img_data:
+                        # Some endpoints return 'image' which may be
+                        # a URL or a base64 string
+                        val = img_data["image"]
+                        if isinstance(val, str) and val.startswith("http"):
+                            async with session.get(val) as img_response:
+                                if img_response.status != 200:
+                                    raise Exception(
+                                        f"Failed to download image from URL: {val}"
+                                    )
+                                image_bytes = await img_response.read()
+                        elif isinstance(val, str):
+                            image_bytes = base64.b64decode(val)
                         else:
                             raise Exception(
-                                f"Unknown image data format in response: {img_data}"
+                                f"Unknown 'image' field format in response: {type(val)}"
                             )
+                    else:
+                        raise Exception(
+                            f"Unknown image data format in response: {img_data}"
+                        )
 
                     # Extract revised prompt if available (DALL-E 3 feature)
                     metadata = {
@@ -107,6 +125,6 @@ class OpenAIImageGenerator(BaseImageGenerator):
                     if style:
                         metadata["style"] = style
 
-                    images.append(GeneratedImage(image=image_bytes, metadata=metadata))
+                    images.append(ImageArtifact(data=image_bytes, metadata=metadata))
 
                 return images

@@ -1,30 +1,33 @@
 import asyncio
 from typing import Any, List
-import aiohttp
 
-from celeste_image_generation.base import BaseImageGenerator
-from celeste_image_generation.core.config import LUMA_API_KEY
-from celeste_image_generation.core.enums import LumaModel
-from celeste_image_generation.core.types import GeneratedImage, ImagePrompt
+import aiohttp
+from celeste_core import ImageArtifact
+from celeste_core.base.image_generator import BaseImageGenerator
+from celeste_core.config.settings import settings
+from celeste_core.enums.capability import Capability
+from celeste_core.models.registry import supports
 
 
 class LumaImageGenerator(BaseImageGenerator):
     """Luma Labs Dream Machine image generator."""
 
-    def __init__(self, model: str = LumaModel.PHOTON_1.value, **kwargs: Any) -> None:
+    def __init__(self, model: str = "photon-1", **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.api_key = LUMA_API_KEY
+        self.api_key = settings.luma.api_key
         if not self.api_key:
             raise ValueError(
                 "Luma AI API key not provided. Set LUMA_API_KEY environment variable."
             )
 
-        self.model_name = model.value if hasattr(model, "value") else model
+        self.model_name = model
         self.base_url = "https://api.lumalabs.ai/dream-machine/v1"
+        if not supports(self.model_name, Capability.IMAGE_GENERATION):
+            raise ValueError(
+                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
+            )
 
-    async def generate_image(
-        self, prompt: ImagePrompt, **kwargs: Any
-    ) -> List[GeneratedImage]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         """
         Generate images using Luma's Dream Machine API.
         """
@@ -34,7 +37,7 @@ class LumaImageGenerator(BaseImageGenerator):
         }
 
         # Build request data
-        data = {"prompt": prompt.content, "model": self.model_name}
+        data = {"prompt": prompt, "model": self.model_name}
 
         # Add aspect ratio if provided
         if "aspect_ratio" in kwargs:
@@ -70,7 +73,7 @@ class LumaImageGenerator(BaseImageGenerator):
             max_attempts = 60  # 5 minutes max wait
             poll_interval = 5  # seconds
 
-            for attempt in range(max_attempts):
+            for _attempt in range(max_attempts):
                 await asyncio.sleep(poll_interval)
 
                 # Check generation status
@@ -80,7 +83,8 @@ class LumaImageGenerator(BaseImageGenerator):
                     if response.status != 200:
                         error_text = await response.text()
                         raise Exception(
-                            f"Luma API error checking status ({response.status}): {error_text}"
+                            f"Luma API error checking status "
+                            f"({response.status}): {error_text}"
                         )
 
                     status_data = await response.json()
@@ -104,8 +108,8 @@ class LumaImageGenerator(BaseImageGenerator):
                             image_bytes = await img_response.read()
 
                             return [
-                                GeneratedImage(
-                                    image=image_bytes,
+                                ImageArtifact(
+                                    data=image_bytes,
                                     metadata={
                                         "model": self.model_name,
                                         "generation_id": generation_id,
@@ -125,5 +129,6 @@ class LumaImageGenerator(BaseImageGenerator):
                     # Still processing, continue polling
 
             raise TimeoutError(
-                f"Image generation timed out after {max_attempts * poll_interval} seconds"
+                f"Image generation timed out after "
+                f"{max_attempts * poll_interval} seconds"
             )

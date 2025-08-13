@@ -1,29 +1,35 @@
 import asyncio
-import streamlit as st
-from dotenv import load_dotenv
+from typing import List, Optional, Union
 
+import streamlit as st
+from celeste_core import ImageArtifact, Provider, list_models
+from celeste_core.enums.capability import Capability
 from celeste_image_generation import create_image_generator
-from celeste_image_generation.core.enums import (
-    Provider,
-    GoogleModel,
-    StabilityModel,
-    LocalModel,
-    OpenAIModel,
-    HuggingFaceModel,
-    LumaModel,
-)
-from celeste_image_generation.core.types import ImagePrompt
+from dotenv import load_dotenv
 
 load_dotenv()
 
 
-def display_image_grid(results):
+def _get_image_displayable(artifact: ImageArtifact) -> Optional[Union[bytes, str]]:
+    """Return bytes or path that Streamlit can display for an ImageArtifact."""
+    if artifact.data:
+        return artifact.data
+    if artifact.path:
+        return artifact.path
+    return None
+
+
+def display_image_grid(results: List[ImageArtifact]) -> None:
     """Display images in a responsive grid layout."""
     num_images = len(results)
 
     if num_images == 1:
         # Single large image
-        st.image(results[0].image, caption="Generated Image", use_container_width=True)
+        img0 = _get_image_displayable(results[0])
+        if img0 is not None:
+            st.image(img0, caption="Generated Image", use_container_width=True)
+        else:
+            st.warning("No image content returned.")
         with st.expander("Details"):
             st.json(results[0].metadata or "No metadata available.")
     elif num_images <= 4:
@@ -32,16 +38,20 @@ def display_image_grid(results):
         rows = (num_images + cols_per_row - 1) // cols_per_row
 
         img_idx = 0
-        for row in range(rows):
+        for _row in range(rows):
             cols = st.columns(cols_per_row)
             for col_idx in range(cols_per_row):
                 if img_idx < num_images:
                     with cols[col_idx]:
-                        st.image(
-                            results[img_idx].image,
-                            caption=f"Image {img_idx+1}",
-                            use_container_width=True,
-                        )
+                        img_obj = _get_image_displayable(results[img_idx])
+                        if img_obj is not None:
+                            st.image(
+                                img_obj,
+                                caption=f"Image {img_idx + 1}",
+                                use_container_width=True,
+                            )
+                        else:
+                            st.warning(f"Image {img_idx + 1} had no content.")
                         with st.expander("Details"):
                             st.json(
                                 results[img_idx].metadata or "No metadata available."
@@ -54,54 +64,44 @@ def display_image_grid(results):
             for j in range(min(3, num_images - i)):
                 with cols[j]:
                     img_idx = i + j
-                    st.image(
-                        results[img_idx].image,
-                        caption=f"Image {img_idx+1}",
-                        use_container_width=True,
-                    )
+                    img_obj = _get_image_displayable(results[img_idx])
+                    if img_obj is not None:
+                        st.image(
+                            img_obj,
+                            caption=f"Image {img_idx + 1}",
+                            use_container_width=True,
+                        )
+                    else:
+                        st.warning(f"Image {img_idx + 1} had no content.")
                     with st.expander("Details"):
                         st.json(results[img_idx].metadata or "No metadata available.")
 
 
 async def main() -> None:
     """
-    Streamlit application for generating images using the celeste-image-generation library.
+    Streamlit application for generating images using the library.
     """
     st.title("Celeste Image Generation")
 
     with st.sidebar:
         st.header("Configuration")
-        provider_options = [
-            "google",
-            "stabilityai",
-            "local",
-            "openai",
-            "huggingface",
-            "luma",
-        ]
-        provider_name = st.selectbox("Provider", options=provider_options, index=0)
+        # Derive providers that have IMAGE_GENERATION models in registry
+        providers = sorted(
+            {m.provider for m in list_models(capability=Capability.IMAGE_GENERATION)},
+            key=lambda p: p.value,
+        )
+        display_providers = [p.value for p in providers]
+        provider_name = st.selectbox("Provider", options=display_providers, index=0)
         provider = Provider(provider_name)
 
-        # Get the appropriate model enum based on provider
-        model_enum_map = {
-            Provider.GOOGLE: GoogleModel,
-            Provider.STABILITYAI: StabilityModel,
-            Provider.LOCAL: LocalModel,
-            Provider.OPENAI: OpenAIModel,
-            Provider.HUGGINGFACE: HuggingFaceModel,
-            Provider.LUMA: LumaModel,
-        }
-
-        model_enum_class = model_enum_map.get(provider)
-
-        if model_enum_class:
-            model_options = list(model_enum_class)
-            selected_model_enum = st.selectbox(
-                "Model", options=model_options, format_func=lambda x: x.value, index=0
-            )
-            selected_model = selected_model_enum.value
-        else:
-            selected_model = None
+        # Load models from registry by provider and IMAGE_GENERATION capability
+        models = list_models(provider=provider, capability=Capability.IMAGE_GENERATION)
+        model_options = [m.id for m in models]
+        display_names = [m.display_name or m.id for m in models]
+        # Map display name to id for selection
+        display_to_id = {display_names[i]: model_options[i] for i in range(len(models))}
+        selected_display = st.selectbox("Model", options=display_names, index=0)
+        selected_model = display_to_id[selected_display] if selected_display else None
 
         # Provider-specific options
         if provider == Provider.GOOGLE:
@@ -133,16 +133,13 @@ async def main() -> None:
                 image_generator = create_image_generator(
                     provider.value, model=selected_model
                 )
-                image_prompt = ImagePrompt(content=prompt_text)
-
                 # Prepare kwargs based on provider
                 kwargs = {}
                 if provider == Provider.GOOGLE:
                     kwargs["n"] = num_images
                 elif provider == Provider.LUMA:
                     kwargs["aspect_ratio"] = aspect_ratio
-
-                results = await image_generator.generate_image(image_prompt, **kwargs)
+                results = await image_generator.generate_image(prompt_text, **kwargs)
             except Exception as e:
                 st.error(f"Error generating image: {str(e)}")
                 # Show full error details in an expander
