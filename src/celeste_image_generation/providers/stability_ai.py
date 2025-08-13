@@ -2,20 +2,20 @@ import base64
 from typing import Any, Dict, List, Tuple
 
 import aiohttp
-
-from celeste_image_generation.base import BaseImageGenerator
-from celeste_image_generation.core.config import STABILITYAI_API_KEY
-from celeste_image_generation.core.enums import StabilityModel
-from celeste_image_generation.core.types import GeneratedImage, ImagePrompt
+from celeste_core import ImageArtifact
+from celeste_core.base.image_generator import BaseImageGenerator
+from celeste_core.config.settings import settings
+from celeste_core.enums.capability import Capability
+from celeste_core.models.registry import supports
 
 
 class StabilityAIImageGenerator(BaseImageGenerator):
     def __init__(
-        self, model: str = StabilityModel.SDXL_1_0.value, **kwargs: Any
+        self, model: str = "stable-diffusion-xl-1024-v1-0", **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
-        self.api_key = STABILITYAI_API_KEY
-        self.model_name = model.value if hasattr(model, "value") else model
+        self.api_key = settings.stability.api_key
+        self.model_name = model
         self.is_v2 = self.model_name in [
             "ultra",
             "core",
@@ -24,10 +24,12 @@ class StabilityAIImageGenerator(BaseImageGenerator):
             "sd3.5-medium",
         ]
         self.is_raw = self.model_name in ["core", "ultra"]
+        if not supports(self.model_name, Capability.IMAGE_GENERATION):
+            raise ValueError(
+                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
+            )
 
-    def _format_request(
-        self, prompt: ImagePrompt, **kwargs: Any
-    ) -> Tuple[str, Dict[str, Any]]:
+    def _format_request(self, prompt: str, **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
         """Format the request based on API version."""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -35,12 +37,15 @@ class StabilityAIImageGenerator(BaseImageGenerator):
         }
 
         if self.is_v2:
-            endpoint = f"https://api.stability.ai/v2beta/stable-image/generate/{'sd3' if self.model_name.startswith('sd3') else self.model_name}"
+            model_path = "sd3" if self.model_name.startswith("sd3") else self.model_name
+            endpoint = (
+                f"https://api.stability.ai/v2beta/stable-image/generate/{model_path}"
+            )
             data = aiohttp.FormData()
             data.add_field(
                 "none", "", filename="", content_type="application/octet-stream"
             )
-            data.add_field("prompt", prompt.content)
+            data.add_field("prompt", prompt)
             data.add_field(
                 "output_format",
                 kwargs.get("output_format", "webp" if self.is_raw else "png"),
@@ -53,33 +58,31 @@ class StabilityAIImageGenerator(BaseImageGenerator):
             return endpoint, {
                 "headers": headers,
                 "json": {
-                    "text_prompts": [{"text": prompt.content}],
+                    "text_prompts": [{"text": prompt}],
                     "height": kwargs.get("height", 1024),
                     "width": kwargs.get("width", 1024),
                 },
             }
 
-    def _parse_response(self, data: Any) -> List[GeneratedImage]:
+    def _parse_response(self, data: Any) -> List[ImageArtifact]:
         """Parse response based on API version and model type."""
         if self.is_v2:
             return [
-                GeneratedImage(
-                    image=base64.b64decode(data["image"]),
+                ImageArtifact(
+                    data=base64.b64decode(data["image"]),
                     metadata={"model": self.model_name, "seed": data.get("seed")},
                 )
             ]
         else:
             return [
-                GeneratedImage(
-                    image=base64.b64decode(artifact["base64"]),
+                ImageArtifact(
+                    data=base64.b64decode(artifact["base64"]),
                     metadata={"model": self.model_name, "seed": artifact.get("seed")},
                 )
                 for artifact in data.get("artifacts", [])
             ]
 
-    async def generate_image(
-        self, prompt: ImagePrompt, **kwargs: Any
-    ) -> List[GeneratedImage]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         endpoint, request_kwargs = self._format_request(prompt, **kwargs)
 
         async with aiohttp.ClientSession() as session:
@@ -97,8 +100,8 @@ class StabilityAIImageGenerator(BaseImageGenerator):
 
                 if self.is_raw:
                     return [
-                        GeneratedImage(
-                            image=await response.read(),
+                        ImageArtifact(
+                            data=await response.read(),
                             metadata={"model": self.model_name},
                         )
                     ]

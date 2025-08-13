@@ -1,22 +1,25 @@
 from typing import Any, List
 
+from celeste_core import ImageArtifact
+from celeste_core.base.image_generator import BaseImageGenerator
+from celeste_core.config.settings import settings
+from celeste_core.enums.capability import Capability
+from celeste_core.models.registry import supports
 from google import genai
-
-from celeste_image_generation.base import BaseImageGenerator
-from celeste_image_generation.core.config import GOOGLE_API_KEY
-from celeste_image_generation.core.enums import GoogleModel
-from celeste_image_generation.core.types import GeneratedImage, ImagePrompt
+from google.genai import types
 
 
 class GoogleImageGenerator(BaseImageGenerator):
-    def __init__(self, model: str = GoogleModel.IMAGEN_3.value, **kwargs: Any) -> None:
+    def __init__(self, model: str = "imagen-3.0-generate-002", **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.client = genai.Client(api_key=GOOGLE_API_KEY)
+        self.client = genai.Client(api_key=settings.google.api_key)
         self.model_name = model
+        if not supports(self.model_name, Capability.IMAGE_GENERATION):
+            raise ValueError(
+                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
+            )
 
-    async def generate_image(
-        self, prompt: ImagePrompt, **kwargs: Any
-    ) -> List[GeneratedImage]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         """Generate images using Google's Imagen models."""
 
         # Allow users to request multiple images via common parameter names
@@ -28,23 +31,19 @@ class GoogleImageGenerator(BaseImageGenerator):
 
         config = None
         if num_images is not None:
-            try:
-                num_images = int(num_images)
-            except (TypeError, ValueError):
-                raise ValueError("num_images must be an integer")
-
+            num_images = int(num_images)
             # Build the generation config with desired number of images
-            config = genai.types.GenerateImagesConfig(number_of_images=num_images)
+            config = types.GenerateImagesConfig(number_of_images=num_images)
 
         response = await self.client.aio.models.generate_images(
             model=self.model_name,
-            prompt=prompt.content,
+            prompt=prompt,
             config=config,
         )
 
         return [
-            GeneratedImage(
-                image=img.image.image_bytes, metadata={"model": self.model_name}
+            ImageArtifact(
+                data=img.image.image_bytes, metadata={"model": self.model_name}
             )
             for img in response.generated_images
         ]

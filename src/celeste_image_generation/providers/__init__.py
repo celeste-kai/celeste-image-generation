@@ -1,10 +1,5 @@
-from .google import GoogleImageGenerator
-from .stability_ai import StabilityAIImageGenerator
-from .local import LocalImageGenerator
-from .openai import OpenAIImageGenerator
-from .huggingface import HuggingFaceImageGenerator
-from .luma import LumaImageGenerator
-from .xai import XAIImageGenerator
+# Provider classes are loaded dynamically by create_image_generator()
+# to avoid importing unnecessary dependencies
 
 __all__ = [
     "GoogleImageGenerator",
