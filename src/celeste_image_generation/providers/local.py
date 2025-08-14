@@ -5,6 +5,7 @@ import torch
 from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.enums.capability import Capability
+from celeste_core.enums.providers import Provider
 from celeste_core.models.registry import supports
 from diffusers import DiffusionPipeline
 
@@ -44,15 +45,22 @@ class LocalImageGenerator(BaseImageGenerator):
             self.pipeline.enable_model_cpu_offload()
         else:
             self.pipeline = self.pipeline.to(self.device)
-        if not supports(self.model_name, Capability.IMAGE_GENERATION):
+        if not supports(Provider.LOCAL, self.model_name, Capability.IMAGE_GENERATION):
             raise ValueError(
                 f"Model '{self.model_name}' does not support IMAGE_GENERATION"
             )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+        # Support common 'n' alias for multiple images
+        num_images = int(kwargs.pop("n", kwargs.pop("num_images", 1)))
+        if num_images < 1:
+            num_images = 1
+
         # Generate images
         with torch.no_grad():
-            images = self.pipeline(prompt, **kwargs).images
+            images = self.pipeline(
+                prompt, num_images_per_prompt=num_images, **kwargs
+            ).images
 
         # Convert to bytes
         return [

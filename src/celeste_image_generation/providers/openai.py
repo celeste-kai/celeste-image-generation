@@ -6,6 +6,7 @@ from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
 from celeste_core.enums.capability import Capability
+from celeste_core.enums.providers import Provider
 from celeste_core.models.registry import supports
 
 
@@ -17,7 +18,7 @@ class OpenAIImageGenerator(BaseImageGenerator):
         self.api_key = settings.openai.api_key
         self.model_name = model
         self.base_url = "https://api.openai.com/v1"
-        if not supports(self.model_name, Capability.IMAGE_GENERATION):
+        if not supports(Provider.OPENAI, self.model_name, Capability.IMAGE_GENERATION):
             raise ValueError(
                 f"Model '{self.model_name}' does not support IMAGE_GENERATION"
             )
