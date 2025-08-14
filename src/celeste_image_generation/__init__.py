@@ -19,6 +19,7 @@ SUPPORTED_PROVIDERS: set[Provider] = {
     Provider.HUGGINGFACE,
     Provider.LUMA,
     Provider.XAI,
+    Provider.REPLICATE,
 }
 
 
@@ -49,6 +50,7 @@ def create_image_generator(
         Provider.HUGGINGFACE: ("providers.huggingface", "HuggingFaceImageGenerator"),
         Provider.LUMA: ("providers.luma", "LumaImageGenerator"),
         Provider.XAI: ("providers.xai", "XAIImageGenerator"),
+        Provider.REPLICATE: ("providers.replicate", "ReplicateImageGenerator"),
     }
 
     if (
