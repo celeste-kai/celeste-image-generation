@@ -156,3 +156,6 @@ output/
 outputs/
 temp/
 tmp/
+
+# Claude AI
+.claude/
