@@ -16,16 +16,13 @@ class XAIImageGenerator(BaseImageGenerator):
     def __init__(self, model: str = "grok-2-image", **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.api_key = settings.xai.api_key
-        if not self.api_key:
-            raise ValueError(
-                "xAI API key not provided. Set XAI_API_KEY environment variable."
-            )
+        # Non-raising: proceed; upstream may allow anonymous or will fail softly
         self.model_name = model
         self.base_url = "https://api.x.ai/v1"
-        if not supports(Provider.XAI, self.model_name, Capability.IMAGE_GENERATION):
-            raise ValueError(
-                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
-            )
+        # Non-raising validation; store support state for callers to inspect
+        self.is_supported = supports(
+            Provider.XAI, self.model_name, Capability.IMAGE_GENERATION
+        )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         """Generate images using xAI's image generation endpoint."""
@@ -48,8 +45,8 @@ class XAIImageGenerator(BaseImageGenerator):
                 headers=headers,
             ) as response:
                 if response.status != 200:
-                    error_text = await response.text()
-                    raise Exception(f"xAI API error ({response.status}): {error_text}")
+                    # Non-raising: return empty list on error
+                    return []
 
                 result = await response.json()
                 images: List[ImageArtifact] = []

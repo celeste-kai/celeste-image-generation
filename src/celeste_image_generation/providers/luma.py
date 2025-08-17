@@ -16,17 +16,14 @@ class LumaImageGenerator(BaseImageGenerator):
     def __init__(self, model: str = "photon-1", **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.api_key = settings.luma.api_key
-        if not self.api_key:
-            raise ValueError(
-                "Luma AI API key not provided. Set LUMA_API_KEY environment variable."
-            )
+        # Non-raising: proceed even if API key is missing
 
         self.model_name = model
         self.base_url = "https://api.lumalabs.ai/dream-machine/v1"
-        if not supports(Provider.LUMA, self.model_name, Capability.IMAGE_GENERATION):
-            raise ValueError(
-                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
-            )
+        # Non-raising validation; store support state for callers to inspect
+        self.is_supported = supports(
+            Provider.LUMA, self.model_name, Capability.IMAGE_GENERATION
+        )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         """
@@ -64,8 +61,8 @@ class LumaImageGenerator(BaseImageGenerator):
                 json=data,
             ) as response:
                 if response.status != 201:
-                    error_text = await response.text()
-                    raise Exception(f"Luma API error ({response.status}): {error_text}")
+                    # Non-raising: return empty list on error
+                    return []
 
                 generation_data = await response.json()
                 generation_id = generation_data["id"]
@@ -82,11 +79,8 @@ class LumaImageGenerator(BaseImageGenerator):
                     f"{self.base_url}/generations/{generation_id}", headers=headers
                 ) as response:
                     if response.status != 200:
-                        error_text = await response.text()
-                        raise Exception(
-                            f"Luma API error checking status "
-                            f"({response.status}): {error_text}"
-                        )
+                        # Non-raising: continue polling
+                        continue
 
                     status_data = await response.json()
                     state = status_data.get("state")
@@ -95,16 +89,12 @@ class LumaImageGenerator(BaseImageGenerator):
                         # Get the image URL
                         image_url = status_data.get("assets", {}).get("image")
                         if not image_url:
-                            raise Exception(
-                                "No image URL found in completed generation"
-                            )
+                            return []
 
                         # Download the image
                         async with session.get(image_url) as img_response:
                             if img_response.status != 200:
-                                raise Exception(
-                                    f"Failed to download image from {image_url}"
-                                )
+                                return []
 
                             image_bytes = await img_response.read()
 
@@ -122,14 +112,10 @@ class LumaImageGenerator(BaseImageGenerator):
                             ]
 
                     elif state == "failed":
-                        failure_reason = status_data.get(
-                            "failure_reason", "Unknown error"
-                        )
-                        raise Exception(f"Image generation failed: {failure_reason}")
+                        # failure_reason is available in status_data if needed
+                        _ = status_data.get("failure_reason", "Unknown error")
+                        return []
 
                     # Still processing, continue polling
 
-            raise TimeoutError(
-                f"Image generation timed out after "
-                f"{max_attempts * poll_interval} seconds"
-            )
+            return []

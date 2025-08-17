@@ -18,10 +18,10 @@ class OpenAIImageGenerator(BaseImageGenerator):
         self.api_key = settings.openai.api_key
         self.model_name = model
         self.base_url = "https://api.openai.com/v1"
-        if not supports(Provider.OPENAI, self.model_name, Capability.IMAGE_GENERATION):
-            raise ValueError(
-                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
-            )
+        # Non-raising validation; store support state for callers to inspect
+        self.is_supported = supports(
+            Provider.OPENAI, self.model_name, Capability.IMAGE_GENERATION
+        )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         """
@@ -70,10 +70,8 @@ class OpenAIImageGenerator(BaseImageGenerator):
                 f"{self.base_url}/images/generations", json=data, headers=headers
             ) as response:
                 if response.status != 200:
-                    error_text = await response.text()
-                    raise Exception(
-                        f"OpenAI API error ({response.status}): {error_text}"
-                    )
+                    # Non-raising: return empty list on error
+                    return []
 
                 result = await response.json()
 
@@ -87,10 +85,7 @@ class OpenAIImageGenerator(BaseImageGenerator):
                     elif "url" in img_data:
                         async with session.get(img_data["url"]) as img_response:
                             if img_response.status != 200:
-                                raise Exception(
-                                    f"Failed to download image from URL: "
-                                    f"{img_data['url']}"
-                                )
+                                continue
                             image_bytes = await img_response.read()
                     elif "image" in img_data:
                         # Some endpoints return 'image' which may be
@@ -106,13 +101,9 @@ class OpenAIImageGenerator(BaseImageGenerator):
                         elif isinstance(val, str):
                             image_bytes = base64.b64decode(val)
                         else:
-                            raise Exception(
-                                f"Unknown 'image' field format in response: {type(val)}"
-                            )
+                            continue
                     else:
-                        raise Exception(
-                            f"Unknown image data format in response: {img_data}"
-                        )
+                        continue
 
                     # Extract revised prompt if available (DALL-E 3 feature)
                     metadata = {

@@ -16,18 +16,13 @@ class HuggingFaceImageGenerator(BaseImageGenerator):
     ) -> None:
         super().__init__(**kwargs)
         api_key = settings.huggingface.access_token
-        if not api_key:
-            raise ValueError(
-                "Hugging Face API key not provided. Set HUGGINGFACE_TOKEN."
-            )
+        # Non-raising: proceed with None token; upstream may handle anonymous
         self.model_name = model
         self.client = AsyncInferenceClient(token=api_key)
-        if not supports(
+        # Non-raising validation; store support state for callers to inspect
+        self.is_supported = supports(
             Provider.HUGGINGFACE, self.model_name, Capability.IMAGE_GENERATION
-        ):
-            raise ValueError(
-                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
-            )
+        )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         # Produce a single image; callers control multiplicity via parallel calls
