@@ -25,12 +25,10 @@ class StabilityAIImageGenerator(BaseImageGenerator):
             "sd3.5-medium",
         ]
         self.is_raw = self.model_name in ["core", "ultra"]
-        if not supports(
+        # Non-raising validation; store support state for callers to inspect
+        self.is_supported = supports(
             Provider.STABILITYAI, self.model_name, Capability.IMAGE_GENERATION
-        ):
-            raise ValueError(
-                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
-            )
+        )
 
     def _format_request(self, prompt: str, **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
         """Format the request based on API version."""
@@ -91,15 +89,8 @@ class StabilityAIImageGenerator(BaseImageGenerator):
         async with aiohttp.ClientSession() as session:
             async with session.post(endpoint, **request_kwargs) as response:
                 if response.status != 200:
-                    error_text = await response.text()
-                    if response.status == 403 and "content_moderation" in error_text:
-                        raise Exception(
-                            "Content blocked by Stability AI moderation. "
-                            "Try rephrasing your prompt or using local models instead."
-                        )
-                    raise Exception(
-                        f"Stability AI API error ({response.status}): {error_text}"
-                    )
+                    # Non-raising: return empty list on error
+                    return []
 
                 if self.is_raw:
                     return [

@@ -45,10 +45,10 @@ class LocalImageGenerator(BaseImageGenerator):
             self.pipeline.enable_model_cpu_offload()
         else:
             self.pipeline = self.pipeline.to(self.device)
-        if not supports(Provider.LOCAL, self.model_name, Capability.IMAGE_GENERATION):
-            raise ValueError(
-                f"Model '{self.model_name}' does not support IMAGE_GENERATION"
-            )
+        # Non-raising validation; store support state for callers to inspect
+        self.is_supported = supports(
+            Provider.LOCAL, self.model_name, Capability.IMAGE_GENERATION
+        )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
         # Support common 'n' alias for multiple images

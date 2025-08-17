@@ -57,11 +57,7 @@ def create_image_generator(
         provider_enum not in SUPPORTED_PROVIDERS
         or provider_enum not in provider_mapping
     ):
-        supported = [p.value for p in provider_mapping.keys()]
-        raise ValueError(
-            f"Unsupported provider: {provider_enum.value}. "
-            f"Supported providers: {supported}"
-        )
+        raise ValueError(f"Unsupported or unmapped provider: {provider_enum}")
 
     # Validate environment for the chosen provider
     settings.validate_for_provider(provider_enum.value)
