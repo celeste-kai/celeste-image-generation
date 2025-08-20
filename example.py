@@ -79,7 +79,7 @@ if st.button("🎨 Generate", type="primary", use_container_width=True):
                     if img.data:
                         target.image(
                             img.data,
-                            caption=f"Image {shown+1}",
+                            caption=f"Image {shown + 1}",
                             use_container_width=True,
                         )
                         with st.expander("Metadata"):
