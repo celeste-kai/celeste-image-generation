@@ -39,7 +39,7 @@ class ReplicateImageGenerator(BaseImageGenerator):
                 if response.status != 200:
                     # Non-raising: return empty list on error
                     return []
-                
+
                 result = await response.json()
                 output = result.get("output", [])
 
