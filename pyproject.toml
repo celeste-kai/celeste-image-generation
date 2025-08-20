@@ -10,6 +10,7 @@ dependencies = [
     "aiohttp>=3.9.0",
     "sentencepiece",
     "huggingface-hub>=0.33.2",
+    "diffusers"
 ]
 
 [dependency-groups]
