@@ -36,16 +36,21 @@ class ReplicateImageGenerator(BaseImageGenerator):
                 json={"input": input_data, "wait": True},  # Use wait parameter
                 headers=headers,
             ) as response:
+                if response.status != 200:
+                    # Non-raising: return empty list on error
+                    return []
+                
                 result = await response.json()
                 output = result.get("output", [])
 
                 images = []
                 for url in output:
                     async with session.get(url) as img_response:
-                        images.append(
-                            ImageArtifact(
-                                data=await img_response.read(),
-                                metadata={"model": self.model_name},
+                        if img_response.status == 200:
+                            images.append(
+                                ImageArtifact(
+                                    data=await img_response.read(),
+                                    metadata={"model": self.model_name},
+                                )
                             )
-                        )
                 return images

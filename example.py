@@ -67,7 +67,7 @@ if st.button("🎨 Generate", type="primary", use_container_width=True):
             async def generate_one(idx: int) -> tuple:
                 async with sem:
                     res = await generator.generate_image(prompt, **base_kwargs)
-                    return idx, res[0]
+                    return idx, res[0] if res else None
 
             tasks = [generate_one(i) for i in range(num_images)]
 
@@ -76,7 +76,7 @@ if st.button("🎨 Generate", type="primary", use_container_width=True):
                 i, img = await fut
                 target = slots[shown % len(slots)]
                 with cols[shown % len(cols)]:
-                    if img.data:
+                    if img and img.data:
                         target.image(
                             img.data,
                             caption=f"Image {shown + 1}",
@@ -84,6 +84,9 @@ if st.button("🎨 Generate", type="primary", use_container_width=True):
                         )
                         with st.expander("Metadata"):
                             st.json(img.metadata)
+                    else:
+                        # Handle case where image generation failed
+                        target.error(f"Failed to generate image {shown + 1}")
                 shown += 1
 
     __import__("asyncio").run(generate_streaming())
