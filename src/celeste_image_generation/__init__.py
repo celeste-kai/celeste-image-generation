@@ -8,19 +8,9 @@ from celeste_core import ImageArtifact, Provider
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
 
+from .mapping import PROVIDER_MAPPING
+
 __version__ = "0.1.0"
-
-
-SUPPORTED_PROVIDERS: set[Provider] = {
-    Provider.GOOGLE,
-    Provider.STABILITYAI,
-    Provider.LOCAL,
-    Provider.OPENAI,
-    Provider.HUGGINGFACE,
-    Provider.LUMA,
-    Provider.XAI,
-    Provider.REPLICATE,
-}
 
 
 def create_image_generator(
@@ -41,28 +31,13 @@ def create_image_generator(
         provider if isinstance(provider, Provider) else Provider(provider)
     )
 
-    # Mapping keyed by Provider enum
-    provider_mapping = {
-        Provider.GOOGLE: ("providers.google", "GoogleImageGenerator"),
-        Provider.STABILITYAI: ("providers.stability_ai", "StabilityAIImageGenerator"),
-        Provider.LOCAL: ("providers.local", "LocalImageGenerator"),
-        Provider.OPENAI: ("providers.openai", "OpenAIImageGenerator"),
-        Provider.HUGGINGFACE: ("providers.huggingface", "HuggingFaceImageGenerator"),
-        Provider.LUMA: ("providers.luma", "LumaImageGenerator"),
-        Provider.XAI: ("providers.xai", "XAIImageGenerator"),
-        Provider.REPLICATE: ("providers.replicate", "ReplicateImageGenerator"),
-    }
-
-    if (
-        provider_enum not in SUPPORTED_PROVIDERS
-        or provider_enum not in provider_mapping
-    ):
-        raise ValueError(f"Unsupported or unmapped provider: {provider_enum}")
+    if provider_enum not in PROVIDER_MAPPING:
+        raise ValueError(f"Unsupported provider: {provider_enum}")
 
     # Validate environment for the chosen provider
     settings.validate_for_provider(provider_enum.value)
 
-    module_path, class_name = provider_mapping[provider_enum]
+    module_path, class_name = PROVIDER_MAPPING[provider_enum]
     module = __import__(
         f"celeste_image_generation.{module_path}", fromlist=[class_name]
     )
