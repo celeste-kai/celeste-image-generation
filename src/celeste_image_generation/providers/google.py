@@ -12,12 +12,11 @@ from google.genai import types
 
 class GoogleImageGenerator(BaseImageGenerator):
     def __init__(self, model: str = "imagen-3.0-generate-002", **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.GOOGLE, **kwargs)
         self.client = genai.Client(api_key=settings.google.api_key)
-        self.model_name = model
         # Non-raising validation; store support state for callers to inspect
         self.is_supported = supports(
-            Provider.GOOGLE, self.model_name, Capability.IMAGE_GENERATION
+            Provider.GOOGLE, self.model, Capability.IMAGE_GENERATION
         )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
@@ -37,14 +36,12 @@ class GoogleImageGenerator(BaseImageGenerator):
             config = types.GenerateImagesConfig(number_of_images=num_images)
 
         response = await self.client.aio.models.generate_images(
-            model=self.model_name,
+            model=self.model,
             prompt=prompt,
             config=config,
         )
 
         return [
-            ImageArtifact(
-                data=img.image.image_bytes, metadata={"model": self.model_name}
-            )
+            ImageArtifact(data=img.image.image_bytes, metadata={"model": self.model})
             for img in response.generated_images
         ]

@@ -1,7 +1,7 @@
 from typing import Any, List
 
 import aiohttp
-from celeste_core import ImageArtifact
+from celeste_core import ImageArtifact, Provider
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
 
@@ -10,9 +10,8 @@ class ReplicateImageGenerator(BaseImageGenerator):
     """Replicate image generator for various models."""
 
     def __init__(self, model: str = "stability-ai/sdxl", **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.REPLICATE, **kwargs)
         self.api_key = settings.replicate.api_token
-        self.model_name = model
         self.base_url = "https://api.replicate.com/v1"
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
@@ -32,7 +31,7 @@ class ReplicateImageGenerator(BaseImageGenerator):
         async with aiohttp.ClientSession() as session:
             # Create prediction and get result
             async with session.post(
-                f"{self.base_url}/models/{self.model_name}/predictions",
+                f"{self.base_url}/models/{self.model}/predictions",
                 json={"input": input_data, "wait": True},  # Use wait parameter
                 headers=headers,
             ) as response:
@@ -45,7 +44,7 @@ class ReplicateImageGenerator(BaseImageGenerator):
                         images.append(
                             ImageArtifact(
                                 data=await img_response.read(),
-                                metadata={"model": self.model_name},
+                                metadata={"model": self.model},
                             )
                         )
                 return images

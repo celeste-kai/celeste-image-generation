@@ -18,11 +18,11 @@ class LumaImageGenerator(BaseImageGenerator):
         self.api_key = settings.luma.api_key
         # Non-raising: proceed even if API key is missing
 
-        self.model_name = model
+        self.model = model
         self.base_url = "https://api.lumalabs.ai/dream-machine/v1"
         # Non-raising validation; store support state for callers to inspect
         self.is_supported = supports(
-            Provider.LUMA, self.model_name, Capability.IMAGE_GENERATION
+            Provider.LUMA, self.model, Capability.IMAGE_GENERATION
         )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
@@ -35,7 +35,7 @@ class LumaImageGenerator(BaseImageGenerator):
         }
 
         # Build request data
-        data = {"prompt": prompt, "model": self.model_name}
+        data = {"prompt": prompt, "model": self.model}
 
         # Add aspect ratio if provided
         if "aspect_ratio" in kwargs:
@@ -102,7 +102,7 @@ class LumaImageGenerator(BaseImageGenerator):
                                 ImageArtifact(
                                     data=image_bytes,
                                     metadata={
-                                        "model": self.model_name,
+                                        "model": self.model,
                                         "generation_id": generation_id,
                                         "aspect_ratio": data.get("aspect_ratio"),
                                         "created_at": status_data.get("created_at"),

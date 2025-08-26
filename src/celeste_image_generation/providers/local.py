@@ -13,7 +13,7 @@ class LocalImageGenerator(BaseImageGenerator):
 
     def __init__(self, model: str = "stabilityai/sdxl-turbo", **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.model_name = model
+        self.model = model
 
         # Detect device: CUDA > MPS > CPU
         if torch.cuda.is_available():
@@ -28,7 +28,7 @@ class LocalImageGenerator(BaseImageGenerator):
 
         # Load pipeline with token from settings if available
         self.pipeline = DiffusionPipeline.from_pretrained(
-            self.model_name,
+            self.model,
             torch_dtype=self.dtype,
             token=settings.huggingface.access_token,
             use_safetensors=True,
@@ -56,7 +56,7 @@ class LocalImageGenerator(BaseImageGenerator):
                     img.save(img_bytes, format="PNG"),
                     img_bytes.getvalue(),
                 )[2],
-                metadata={"model": self.model_name, "device": self.device},
+                metadata={"model": self.model, "device": self.device},
             )
             for img in images
         ]
