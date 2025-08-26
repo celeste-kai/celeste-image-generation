@@ -43,12 +43,8 @@ class LocalImageGenerator(BaseImageGenerator):
             self.pipeline.enable_attention_slicing()
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
-        num_images = kwargs.pop("n", kwargs.pop("num_images", 1))
-
         with torch.no_grad():
-            images = self.pipeline(
-                prompt, num_images_per_prompt=num_images, **kwargs
-            ).images
+            images = self.pipeline(prompt, **kwargs).images
 
         return [
             ImageArtifact(
@@ -57,7 +53,7 @@ class LocalImageGenerator(BaseImageGenerator):
                     img.save(img_bytes, format="PNG"),
                     img_bytes.getvalue(),
                 )[2],
-                metadata={"model": self.model, "device": self.device},
+                metadata={"model": self.model, "device": self.device, **kwargs},
             )
             for img in images
         ]

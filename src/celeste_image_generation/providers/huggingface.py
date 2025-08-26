@@ -4,9 +4,7 @@ from typing import Any, List
 from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
-from celeste_core.enums.capability import Capability
 from celeste_core.enums.providers import Provider
-from celeste_core.models.registry import supports
 from huggingface_hub import AsyncInferenceClient
 
 
@@ -16,20 +14,11 @@ class HuggingFaceImageGenerator(BaseImageGenerator):
     ) -> None:
         super().__init__(model=model, provider=Provider.HUGGINGFACE, **kwargs)
         api_key = settings.huggingface.access_token
-        # Non-raising: proceed with None token; upstream may handle anonymous
-        self.model = model
         self.client = AsyncInferenceClient(token=api_key)
-        # Non-raising validation; store support state for callers to inspect
-        self.is_supported = supports(
-            Provider.HUGGINGFACE, self.model, Capability.IMAGE_GENERATION
-        )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
-        # Produce a single image; callers control multiplicity via parallel calls
-        # Strip non-HF args and honor caller-specified format when provided
-        requested_format = kwargs.pop("output_format", None)
         img = await self.client.text_to_image(prompt, model=self.model, **kwargs)
-        fmt = requested_format or getattr(img, "format", None) or "PNG"
+        fmt = getattr(img, "format", None) or "PNG"
         buf = io.BytesIO()
         img.save(buf, format=fmt)
         return [
@@ -39,6 +28,7 @@ class HuggingFaceImageGenerator(BaseImageGenerator):
                     "model": self.model,
                     "provider": "huggingface",
                     "format": fmt,
+                    **kwargs,
                 },
             )
         ]
