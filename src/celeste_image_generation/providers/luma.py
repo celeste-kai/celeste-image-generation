@@ -29,18 +29,20 @@ class LumaImageGenerator(BaseImageGenerator):
             async with session.post(
                 f"{self.base_url}/generations/image", headers=headers, json=data
             ) as response:
-                if response.status != 201:
-                    return []
+                response.raise_for_status()
                 generation_id = (await response.json())["id"]
 
-            # Poll for completion
-            for _ in range(60):  # 5 minutes max wait
-                await asyncio.sleep(5)
+            # Poll for completion with exponential backoff
+            max_attempts = 60
+            base_delay = 2
+
+            for attempt in range(max_attempts):
+                delay = min(base_delay * (2 ** min(attempt // 5, 4)), 10)
+                await asyncio.sleep(delay)
                 async with session.get(
                     f"{self.base_url}/generations/{generation_id}", headers=headers
                 ) as response:
-                    if response.status != 200:
-                        continue
+                    response.raise_for_status()
 
                     status_data = await response.json()
                     state = status_data.get("state")
@@ -48,11 +50,10 @@ class LumaImageGenerator(BaseImageGenerator):
                     if state == "completed":
                         image_url = status_data.get("assets", {}).get("image")
                         if not image_url:
-                            return []
+                            raise ValueError("No image URL in completed generation")
 
                         async with session.get(image_url) as img_response:
-                            if img_response.status != 200:
-                                return []
+                            img_response.raise_for_status()
 
                             return [
                                 ImageArtifact(
@@ -68,6 +69,9 @@ class LumaImageGenerator(BaseImageGenerator):
                             ]
 
                     elif state == "failed":
-                        return []
+                        failure_reason = status_data.get(
+                            "failure_reason", "Unknown error"
+                        )
+                        raise RuntimeError(f"Image generation failed: {failure_reason}")
 
-            return []
+            raise TimeoutError("Image generation timed out after 5 minutes")

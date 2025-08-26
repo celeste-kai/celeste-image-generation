@@ -34,8 +34,7 @@ class StabilityAIImageGenerator(BaseImageGenerator):
 
         async with aiohttp.ClientSession() as session:
             async with session.post(endpoint, headers=headers, data=data) as response:
-                if response.status != 200:
-                    return []
+                response.raise_for_status()
 
                 if self.is_raw:
                     return [
