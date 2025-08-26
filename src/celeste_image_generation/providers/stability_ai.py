@@ -1,105 +1,57 @@
 import base64
-from typing import Any, Dict, List, Tuple
+from typing import Any, List
 
 import aiohttp
 from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
-from celeste_core.enums.capability import Capability
 from celeste_core.enums.providers import Provider
-from celeste_core.models.registry import supports
 
 
 class StabilityAIImageGenerator(BaseImageGenerator):
-    def __init__(
-        self, model: str = "stable-diffusion-xl-1024-v1-0", **kwargs: Any
-    ) -> None:
+    def __init__(self, model: str = "core", **kwargs: Any) -> None:
         super().__init__(model=model, provider=Provider.STABILITYAI, **kwargs)
         self.api_key = settings.stability.api_key
-        self.model = model
-        self.is_v2 = self.model in [
-            "ultra",
-            "core",
-            "sd3.5-large",
-            "sd3.5-large-turbo",
-            "sd3.5-medium",
-        ]
         self.is_raw = self.model in ["core", "ultra"]
-        # Non-raising validation; store support state for callers to inspect
-        self.is_supported = supports(
-            Provider.STABILITYAI, self.model, Capability.IMAGE_GENERATION
-        )
 
-    def _format_request(self, prompt: str, **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
-        """Format the request based on API version."""
+    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+        """Generate images using Stability AI's v2 API."""
+        endpoint = f"https://api.stability.ai/v2beta/stable-image/generate/{self.model}"
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Accept": "image/*" if self.is_raw else "application/json",
         }
 
-        if self.is_v2:
-            model_path = "sd3" if self.model.startswith("sd3") else self.model
-            endpoint = (
-                f"https://api.stability.ai/v2beta/stable-image/generate/{model_path}"
-            )
-            data = aiohttp.FormData()
-            data.add_field(
-                "none", "", filename="", content_type="application/octet-stream"
-            )
-            data.add_field("prompt", prompt)
-            data.add_field(
-                "output_format",
-                kwargs.get("output_format", "webp" if self.is_raw else "png"),
-            )
-            if self.model.startswith("sd3"):
-                data.add_field("model", self.model)
-            return endpoint, {"headers": headers, "data": data}
-        else:
-            endpoint = (
-                f"https://api.stability.ai/v1/generation/{self.model}/text-to-image"
-            )
-            return endpoint, {
-                "headers": headers,
-                "json": {
-                    "text_prompts": [{"text": prompt}],
-                    "height": kwargs.get("height", 1024),
-                    "width": kwargs.get("width", 1024),
-                },
-            }
+        data = aiohttp.FormData()
+        data.add_field("none", "", filename="", content_type="application/octet-stream")
+        data.add_field("prompt", prompt)
+        data.add_field("model", self.model)
 
-    def _parse_response(self, data: Any) -> List[ImageArtifact]:
-        """Parse response based on API version and model type."""
-        if self.is_v2:
-            return [
-                ImageArtifact(
-                    data=base64.b64decode(data["image"]),
-                    metadata={"model": self.model, "seed": data.get("seed")},
-                )
-            ]
-        else:
-            return [
-                ImageArtifact(
-                    data=base64.b64decode(artifact["base64"]),
-                    metadata={"model": self.model, "seed": artifact.get("seed")},
-                )
-                for artifact in data.get("artifacts", [])
-            ]
-
-    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
-        endpoint, request_kwargs = self._format_request(prompt, **kwargs)
+        # Add all kwargs as form fields
+        for key, value in kwargs.items():
+            data.add_field(key, str(value))
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(endpoint, **request_kwargs) as response:
-                if response.status != 200:
-                    # Non-raising: return empty list on error
-                    return []
+            async with session.post(endpoint, headers=headers, data=data) as response:
+                response.raise_for_status()
 
                 if self.is_raw:
                     return [
                         ImageArtifact(
                             data=await response.read(),
-                            metadata={"model": self.model},
+                            metadata={"model": self.model, **kwargs},
                         )
                     ]
 
-                return self._parse_response(await response.json())
+                response_data = await response.json()
+                return [
+                    ImageArtifact(
+                        data=base64.b64decode(response_data["image"]),
+                        metadata={
+                            "model": self.model,
+                            "seed": response_data.get("seed"),
+                            **kwargs,
+                        },
+                    )
+                ]

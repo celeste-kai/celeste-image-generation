@@ -1,6 +1,6 @@
 from typing import Any, List
 
-import aiohttp
+import replicate
 from celeste_core import ImageArtifact, Provider
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
@@ -11,40 +11,29 @@ class ReplicateImageGenerator(BaseImageGenerator):
 
     def __init__(self, model: str = "stability-ai/sdxl", **kwargs: Any) -> None:
         super().__init__(model=model, provider=Provider.REPLICATE, **kwargs)
-        self.api_key = settings.replicate.api_token
-        self.base_url = "https://api.replicate.com/v1"
+        self.client = replicate.Client(api_token=settings.replicate.api_token)
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
-        """Generate images using Replicate's API."""
-        headers = {
-            "Authorization": f"Token {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        """Generate images using Replicate's official SDK."""
+        input_data = {"prompt": prompt, **kwargs}
 
-        input_data = {"prompt": prompt}
-        for key in ["width", "height", "num_outputs", "guidance_scale", "seed"]:
-            if key in kwargs:
-                input_data[key] = kwargs[key]
-        if "n" in kwargs:
-            input_data["num_outputs"] = kwargs["n"]
+        # Use client's async run method
+        outputs = await self.client.async_run(self.model, input=input_data)
 
-        async with aiohttp.ClientSession() as session:
-            # Create prediction and get result
-            async with session.post(
-                f"{self.base_url}/models/{self.model}/predictions",
-                json={"input": input_data, "wait": True},  # Use wait parameter
-                headers=headers,
-            ) as response:
-                result = await response.json()
-                output = result.get("output", [])
+        images: List[ImageArtifact] = []
 
-                images = []
-                for url in output:
-                    async with session.get(url) as img_response:
-                        images.append(
-                            ImageArtifact(
-                                data=await img_response.read(),
-                                metadata={"model": self.model},
-                            )
-                        )
-                return images
+        # Handle both single output and list of outputs
+        if not isinstance(outputs, list):
+            outputs = [outputs]
+
+        for output in outputs:
+            # Read binary data from FileOutput object
+            image_bytes = output.read()
+
+            images.append(
+                ImageArtifact(
+                    data=image_bytes, metadata={"model": self.model, **kwargs}
+                )
+            )
+
+        return images
