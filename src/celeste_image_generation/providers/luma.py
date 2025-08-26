@@ -14,7 +14,7 @@ class LumaImageGenerator(BaseImageGenerator):
     """Luma Labs Dream Machine image generator."""
 
     def __init__(self, model: str = "photon-1", **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.LUMA, **kwargs)
         self.api_key = settings.luma.api_key
         # Non-raising: proceed even if API key is missing
 

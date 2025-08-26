@@ -5,6 +5,7 @@ import torch
 from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
+from celeste_core.enums.providers import Provider
 from diffusers import DiffusionPipeline
 
 
@@ -12,7 +13,7 @@ class LocalImageGenerator(BaseImageGenerator):
     """Local image generator using Hugging Face diffusers."""
 
     def __init__(self, model: str = "stabilityai/sdxl-turbo", **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.LOCAL, **kwargs)
         self.model = model
 
         # Detect device: CUDA > MPS > CPU

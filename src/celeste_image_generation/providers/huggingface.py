@@ -14,7 +14,7 @@ class HuggingFaceImageGenerator(BaseImageGenerator):
     def __init__(
         self, model: str = "black-forest-labs/FLUX.1-schnell", **kwargs: Any
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.HUGGINGFACE, **kwargs)
         api_key = settings.huggingface.access_token
         # Non-raising: proceed with None token; upstream may handle anonymous
         self.model = model

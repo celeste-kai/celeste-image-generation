@@ -14,7 +14,7 @@ class StabilityAIImageGenerator(BaseImageGenerator):
     def __init__(
         self, model: str = "stable-diffusion-xl-1024-v1-0", **kwargs: Any
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.STABILITYAI, **kwargs)
         self.api_key = settings.stability.api_key
         self.model = model
         self.is_v2 = self.model in [

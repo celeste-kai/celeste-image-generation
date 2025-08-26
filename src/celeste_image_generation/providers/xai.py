@@ -14,7 +14,7 @@ class XAIImageGenerator(BaseImageGenerator):
     """xAI image generator using Grok's image API."""
 
     def __init__(self, model: str = "grok-2-image", **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.XAI, **kwargs)
         self.api_key = settings.xai.api_key
         # Non-raising: proceed; upstream may allow anonymous or will fail softly
         self.model = model
