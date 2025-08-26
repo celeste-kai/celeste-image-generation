@@ -14,20 +14,20 @@ class StabilityAIImageGenerator(BaseImageGenerator):
     def __init__(
         self, model: str = "stable-diffusion-xl-1024-v1-0", **kwargs: Any
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.STABILITYAI, **kwargs)
         self.api_key = settings.stability.api_key
-        self.model_name = model
-        self.is_v2 = self.model_name in [
+        self.model = model
+        self.is_v2 = self.model in [
             "ultra",
             "core",
             "sd3.5-large",
             "sd3.5-large-turbo",
             "sd3.5-medium",
         ]
-        self.is_raw = self.model_name in ["core", "ultra"]
+        self.is_raw = self.model in ["core", "ultra"]
         # Non-raising validation; store support state for callers to inspect
         self.is_supported = supports(
-            Provider.STABILITYAI, self.model_name, Capability.IMAGE_GENERATION
+            Provider.STABILITYAI, self.model, Capability.IMAGE_GENERATION
         )
 
     def _format_request(self, prompt: str, **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
@@ -38,7 +38,7 @@ class StabilityAIImageGenerator(BaseImageGenerator):
         }
 
         if self.is_v2:
-            model_path = "sd3" if self.model_name.startswith("sd3") else self.model_name
+            model_path = "sd3" if self.model.startswith("sd3") else self.model
             endpoint = (
                 f"https://api.stability.ai/v2beta/stable-image/generate/{model_path}"
             )
@@ -51,11 +51,13 @@ class StabilityAIImageGenerator(BaseImageGenerator):
                 "output_format",
                 kwargs.get("output_format", "webp" if self.is_raw else "png"),
             )
-            if self.model_name.startswith("sd3"):
-                data.add_field("model", self.model_name)
+            if self.model.startswith("sd3"):
+                data.add_field("model", self.model)
             return endpoint, {"headers": headers, "data": data}
         else:
-            endpoint = f"https://api.stability.ai/v1/generation/{self.model_name}/text-to-image"
+            endpoint = (
+                f"https://api.stability.ai/v1/generation/{self.model}/text-to-image"
+            )
             return endpoint, {
                 "headers": headers,
                 "json": {
@@ -71,14 +73,14 @@ class StabilityAIImageGenerator(BaseImageGenerator):
             return [
                 ImageArtifact(
                     data=base64.b64decode(data["image"]),
-                    metadata={"model": self.model_name, "seed": data.get("seed")},
+                    metadata={"model": self.model, "seed": data.get("seed")},
                 )
             ]
         else:
             return [
                 ImageArtifact(
                     data=base64.b64decode(artifact["base64"]),
-                    metadata={"model": self.model_name, "seed": artifact.get("seed")},
+                    metadata={"model": self.model, "seed": artifact.get("seed")},
                 )
                 for artifact in data.get("artifacts", [])
             ]
@@ -96,7 +98,7 @@ class StabilityAIImageGenerator(BaseImageGenerator):
                     return [
                         ImageArtifact(
                             data=await response.read(),
-                            metadata={"model": self.model_name},
+                            metadata={"model": self.model},
                         )
                     ]
 

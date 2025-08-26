@@ -14,13 +14,12 @@ class OpenAIImageGenerator(BaseImageGenerator):
     """OpenAI image generator using DALL-E models."""
 
     def __init__(self, model: str = "dall-e-3", **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.OPENAI, **kwargs)
         self.api_key = settings.openai.api_key
-        self.model_name = model
         self.base_url = "https://api.openai.com/v1"
         # Non-raising validation; store support state for callers to inspect
         self.is_supported = supports(
-            Provider.OPENAI, self.model_name, Capability.IMAGE_GENERATION
+            Provider.OPENAI, self.model, Capability.IMAGE_GENERATION
         )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
@@ -28,7 +27,7 @@ class OpenAIImageGenerator(BaseImageGenerator):
         Generate images using OpenAI's image generation API.
         """
         # Set defaults based on model
-        if self.model_name == "dall-e-3":
+        if self.model == "dall-e-3":
             size = kwargs.get("size", "1024x1024")
             quality = kwargs.get("quality", "standard")
             style = kwargs.get("style", "vivid")
@@ -43,18 +42,18 @@ class OpenAIImageGenerator(BaseImageGenerator):
 
         # Build request
         data = {
-            "model": self.model_name,
+            "model": self.model,
             "prompt": prompt,
             "size": size,
             "n": n,
         }
 
         # Only add response_format for DALL-E models (not gpt-image-1)
-        if self.model_name in ["dall-e-2", "dall-e-3"]:
+        if self.model in ["dall-e-2", "dall-e-3"]:
             data["response_format"] = response_format
 
         # Add DALL-E 3 specific parameters
-        if self.model_name == "dall-e-3":
+        if self.model == "dall-e-3":
             if quality:
                 data["quality"] = quality
             if style:
@@ -107,7 +106,7 @@ class OpenAIImageGenerator(BaseImageGenerator):
 
                     # Extract revised prompt if available (DALL-E 3 feature)
                     metadata = {
-                        "model": self.model_name,
+                        "model": self.model,
                         "size": size,
                     }
                     if "revised_prompt" in img_data:

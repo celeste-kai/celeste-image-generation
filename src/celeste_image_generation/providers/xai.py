@@ -14,14 +14,14 @@ class XAIImageGenerator(BaseImageGenerator):
     """xAI image generator using Grok's image API."""
 
     def __init__(self, model: str = "grok-2-image", **kwargs: Any) -> None:
-        super().__init__(**kwargs)
+        super().__init__(model=model, provider=Provider.XAI, **kwargs)
         self.api_key = settings.xai.api_key
         # Non-raising: proceed; upstream may allow anonymous or will fail softly
-        self.model_name = model
+        self.model = model
         self.base_url = "https://api.x.ai/v1"
         # Non-raising validation; store support state for callers to inspect
         self.is_supported = supports(
-            Provider.XAI, self.model_name, Capability.IMAGE_GENERATION
+            Provider.XAI, self.model, Capability.IMAGE_GENERATION
         )
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
@@ -32,7 +32,7 @@ class XAIImageGenerator(BaseImageGenerator):
         }
 
         data = {
-            "model": self.model_name,
+            "model": self.model,
             "prompt": prompt,
             "n": kwargs.get("n", 1),
             "response_format": kwargs.get("response_format", "b64_json"),
@@ -64,7 +64,7 @@ class XAIImageGenerator(BaseImageGenerator):
                         continue
 
                     metadata = {
-                        "model": self.model_name,
+                        "model": self.model,
                         "provider": "xai",
                     }
                     if "revised_prompt" in img_data:
