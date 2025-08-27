@@ -14,8 +14,16 @@ class GoogleImageGenerator(BaseImageGenerator):
         self.client = genai.Client(api_key=settings.google.api_key)
 
     async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
-        """Generate images using Google's Imagen models."""
+        """Generate images using Google's models."""
+        try:
+            return await self._generate_imagen_image(prompt, **kwargs)
+        except Exception:
+            return await self._generate_gemini_image(prompt, **kwargs)
 
+    async def _generate_imagen_image(
+        self, prompt: str, **kwargs: Any
+    ) -> List[ImageArtifact]:
+        """Generate images using Google's Imagen API (generate_images)."""
         config = None
         if kwargs:
             config = types.GenerateImagesConfig(**kwargs)
@@ -32,3 +40,26 @@ class GoogleImageGenerator(BaseImageGenerator):
             )
             for img in response.generated_images
         ]
+
+    async def _generate_gemini_image(
+        self, prompt: str, **kwargs: Any
+    ) -> List[ImageArtifact]:
+        """Generate images using Google's Gemini API (generate_content)."""
+
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=[prompt],
+        )
+
+        artifacts = []
+        for candidate in response.candidates:
+            for part in candidate.content.parts:
+                if part.inline_data is not None:
+                    artifacts.append(
+                        ImageArtifact(
+                            data=part.inline_data.data,
+                            metadata={"model": self.model, **kwargs},
+                        )
+                    )
+
+        return artifacts
