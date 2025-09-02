@@ -41,21 +41,32 @@ async def main() -> None:
     )
 
     if st.button("🎨 Generate", type="primary", use_container_width=True):
-        generator = create_image_generator(Provider(provider), model=model)
+        if not prompt.strip():
+            st.error("Please enter a prompt.")
+        else:
+            generator = create_image_generator(Provider(provider), model=model)
 
-        with st.spinner("Generating..."):
-            base_kwargs: dict = {}
-            res = await generator.generate_image(prompt, **base_kwargs)
-            img = res[0]
+            with st.spinner("Generating..."):
+                result = await generator.generate_image(prompt)
 
-            if img.data:
-                st.image(
-                    img.data,
-                    caption="Generated Image",
-                    use_container_width=True,
-                )
-                with st.expander("Metadata"):
-                    st.json(img.metadata)
+                if result and result[0].data:
+                    img = result[0]
+                    st.success("✅ Image generated successfully!")
+                    st.image(
+                        img.data,
+                        caption="Generated Image",
+                        use_container_width=True,
+                    )
+
+                    # Show metadata
+                    with st.expander("📊 Details"):
+                        st.write(f"**Provider:** {provider}")
+                        st.write(f"**Model:** {model}")
+                        st.write(f"**Prompt:** {prompt}")
+                        if img.metadata:
+                            st.json(img.metadata)
+                else:
+                    st.error("Failed to generate image. Please try again.")
 
     st.markdown("---")
     st.caption("Built with Streamlit • Powered by Celeste")
