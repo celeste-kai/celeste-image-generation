@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, List
+from typing import Any
 
 import aiohttp
 from celeste_core import ImageArtifact
@@ -16,7 +16,7 @@ class LumaImageGenerator(BaseImageGenerator):
         self.api_key = settings.luma.api_key
         self.base_url = "https://api.lumalabs.ai/dream-machine/v1"
 
-    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         """Generate images using Luma's Dream Machine API."""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -26,9 +26,7 @@ class LumaImageGenerator(BaseImageGenerator):
 
         async with aiohttp.ClientSession() as session:
             # Create generation
-            async with session.post(
-                f"{self.base_url}/generations/image", headers=headers, json=data
-            ) as response:
+            async with session.post(f"{self.base_url}/generations/image", headers=headers, json=data) as response:
                 response.raise_for_status()
                 generation_id = (await response.json())["id"]
 
@@ -39,9 +37,7 @@ class LumaImageGenerator(BaseImageGenerator):
             for attempt in range(max_attempts):
                 delay = min(base_delay * (2 ** min(attempt // 5, 4)), 10)
                 await asyncio.sleep(delay)
-                async with session.get(
-                    f"{self.base_url}/generations/{generation_id}", headers=headers
-                ) as response:
+                async with session.get(f"{self.base_url}/generations/{generation_id}", headers=headers) as response:
                     response.raise_for_status()
 
                     status_data = await response.json()
@@ -69,9 +65,7 @@ class LumaImageGenerator(BaseImageGenerator):
                             ]
 
                     elif state == "failed":
-                        failure_reason = status_data.get(
-                            "failure_reason", "Unknown error"
-                        )
+                        failure_reason = status_data.get("failure_reason", "Unknown error")
                         raise RuntimeError(f"Image generation failed: {failure_reason}")
 
             raise TimeoutError("Image generation timed out after 5 minutes")

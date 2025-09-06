@@ -1,5 +1,5 @@
 import base64
-from typing import Any, List
+from typing import Any
 
 from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
@@ -15,18 +15,16 @@ class OpenAIImageGenerator(BaseImageGenerator):
         super().__init__(model=model, provider=Provider.OPENAI, **kwargs)
         self.client = AsyncOpenAI(api_key=settings.openai.api_key)
 
-    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         """
         Generate images using OpenAI's image generation API.
         """
         # Force b64_json for reliability and consistency
         kwargs["response_format"] = "b64_json"
 
-        response = await self.client.images.generate(
-            model=self.model, prompt=prompt, **kwargs
-        )
+        response = await self.client.images.generate(model=self.model, prompt=prompt, **kwargs)
 
-        images: List[ImageArtifact] = []
+        images: list[ImageArtifact] = []
         for img_data in response.data:
             image_bytes = base64.b64decode(img_data.b64_json)
 

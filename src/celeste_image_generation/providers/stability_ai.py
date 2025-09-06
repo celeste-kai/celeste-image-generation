@@ -1,5 +1,5 @@
 import base64
-from typing import Any, List
+from typing import Any
 
 import aiohttp
 from celeste_core import ImageArtifact
@@ -14,7 +14,7 @@ class StabilityAIImageGenerator(BaseImageGenerator):
         self.api_key = settings.stability.api_key
         self.is_raw = self.model in ["core", "ultra"]
 
-    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         """Generate images using Stability AI's v2 API."""
         endpoint = f"https://api.stability.ai/v2beta/stable-image/generate/{self.model}"
 
@@ -32,26 +32,25 @@ class StabilityAIImageGenerator(BaseImageGenerator):
         for key, value in kwargs.items():
             data.add_field(key, str(value))
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(endpoint, headers=headers, data=data) as response:
-                response.raise_for_status()
+        async with aiohttp.ClientSession() as session, session.post(endpoint, headers=headers, data=data) as response:
+            response.raise_for_status()
 
-                if self.is_raw:
-                    return [
-                        ImageArtifact(
-                            data=await response.read(),
-                            metadata={"model": self.model, **kwargs},
-                        )
-                    ]
-
-                response_data = await response.json()
+            if self.is_raw:
                 return [
                     ImageArtifact(
-                        data=base64.b64decode(response_data["image"]),
-                        metadata={
-                            "model": self.model,
-                            "seed": response_data.get("seed"),
-                            **kwargs,
-                        },
+                        data=await response.read(),
+                        metadata={"model": self.model, **kwargs},
                     )
                 ]
+
+            response_data = await response.json()
+            return [
+                ImageArtifact(
+                    data=base64.b64decode(response_data["image"]),
+                    metadata={
+                        "model": self.model,
+                        "seed": response_data.get("seed"),
+                        **kwargs,
+                    },
+                )
+            ]

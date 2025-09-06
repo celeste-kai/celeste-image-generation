@@ -3,13 +3,12 @@ import asyncio
 import streamlit as st
 from celeste_core import Provider, list_models
 from celeste_core.enums.capability import Capability
+
 from celeste_image_generation import create_image_generator
 
 
 async def main() -> None:
-    st.set_page_config(
-        page_title="Celeste Image Generation", page_icon="🎨", layout="wide"
-    )
+    st.set_page_config(page_title="Celeste Image Generation", page_icon="🎨", layout="wide")
     st.title("🎨 Celeste Image Generation")
 
     # Get providers that support image generation
@@ -20,16 +19,10 @@ async def main() -> None:
 
     with st.sidebar:
         st.header("⚙️ Configuration")
-        provider = st.selectbox(
-            "Provider:", [p.value for p in providers], format_func=str.title
-        )
-        models = list_models(
-            provider=Provider(provider), capability=Capability.IMAGE_GENERATION
-        )
+        provider = st.selectbox("Provider:", [p.value for p in providers], format_func=str.title)
+        models = list_models(provider=Provider(provider), capability=Capability.IMAGE_GENERATION)
         model_names = [m.display_name or m.id for m in models]
-        selected_idx = st.selectbox(
-            "Model:", range(len(models)), format_func=lambda i: model_names[i]
-        )
+        selected_idx = st.selectbox("Model:", range(len(models)), format_func=lambda i: model_names[i])
         model = models[selected_idx].id
 
     st.markdown(f"*Powered by {provider.title()}*")

@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
@@ -13,16 +13,14 @@ class GoogleImageGenerator(BaseImageGenerator):
         super().__init__(model=model, provider=Provider.GOOGLE, **kwargs)
         self.client = genai.Client(api_key=settings.google.api_key)
 
-    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         """Generate images using Google's models."""
         try:
             return await self._generate_imagen_image(prompt, **kwargs)
         except Exception:
             return await self._generate_gemini_image(prompt, **kwargs)
 
-    async def _generate_imagen_image(
-        self, prompt: str, **kwargs: Any
-    ) -> List[ImageArtifact]:
+    async def _generate_imagen_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         """Generate images using Google's Imagen API (generate_images)."""
         config = None
         if kwargs:
@@ -35,15 +33,11 @@ class GoogleImageGenerator(BaseImageGenerator):
         )
 
         return [
-            ImageArtifact(
-                data=img.image.image_bytes, metadata={"model": self.model, **kwargs}
-            )
+            ImageArtifact(data=img.image.image_bytes, metadata={"model": self.model, **kwargs})
             for img in response.generated_images
         ]
 
-    async def _generate_gemini_image(
-        self, prompt: str, **kwargs: Any
-    ) -> List[ImageArtifact]:
+    async def _generate_gemini_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         """Generate images using Google's Gemini API (generate_content)."""
 
         response = await self.client.aio.models.generate_content(
