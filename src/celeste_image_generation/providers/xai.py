@@ -1,5 +1,5 @@
 import base64
-from typing import Any, List
+from typing import Any
 
 import aiohttp
 from celeste_core import ImageArtifact
@@ -16,7 +16,7 @@ class XAIImageGenerator(BaseImageGenerator):
         self.api_key = settings.xai.api_key
         self.base_url = "https://api.x.ai/v1"
 
-    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         """Generate images using xAI's image generation endpoint."""
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -30,28 +30,30 @@ class XAIImageGenerator(BaseImageGenerator):
             **kwargs,
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
                 f"{self.base_url}/images/generations",
                 json=data,
                 headers=headers,
-            ) as response:
-                response.raise_for_status()
+            ) as response,
+        ):
+            response.raise_for_status()
 
-                result = await response.json()
-                images: List[ImageArtifact] = []
+            result = await response.json()
+            images: list[ImageArtifact] = []
 
-                for img_data in result.get("data", []):
-                    image_bytes = base64.b64decode(img_data["b64_json"])
+            for img_data in result.get("data", []):
+                image_bytes = base64.b64decode(img_data["b64_json"])
 
-                    metadata = {
-                        "model": self.model,
-                        "provider": "xai",
-                        **kwargs,
-                    }
-                    if "revised_prompt" in img_data:
-                        metadata["revised_prompt"] = img_data["revised_prompt"]
+                metadata = {
+                    "model": self.model,
+                    "provider": "xai",
+                    **kwargs,
+                }
+                if "revised_prompt" in img_data:
+                    metadata["revised_prompt"] = img_data["revised_prompt"]
 
-                    images.append(ImageArtifact(data=image_bytes, metadata=metadata))
+                images.append(ImageArtifact(data=image_bytes, metadata=metadata))
 
-                return images
+            return images

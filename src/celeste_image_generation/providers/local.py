@@ -1,5 +1,5 @@
 import io
-from typing import Any, List, Optional
+from typing import Any
 
 import torch
 from celeste_core import ImageArtifact
@@ -15,7 +15,7 @@ class LocalImageGenerator(BaseImageGenerator):
     def __init__(self, model: str = "stabilityai/sdxl-turbo", **kwargs: Any) -> None:
         super().__init__(model=model, provider=Provider.LOCAL, **kwargs)
         self.model = model
-        self.pipeline: Optional[DiffusionPipeline] = None
+        self.pipeline: DiffusionPipeline | None = None
 
         # Detect device: CUDA > MPS > CPU
         if torch.cuda.is_available():
@@ -45,7 +45,7 @@ class LocalImageGenerator(BaseImageGenerator):
                 # Recommended for Apple Silicon with < 64GB RAM
                 self.pipeline.enable_attention_slicing()
 
-    async def generate_image(self, prompt: str, **kwargs: Any) -> List[ImageArtifact]:
+    async def generate_image(self, prompt: str, **kwargs: Any) -> list[ImageArtifact]:
         self._load_pipeline()
         if self.pipeline is None:
             raise RuntimeError("Failed to load pipeline")
