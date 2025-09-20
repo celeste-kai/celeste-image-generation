@@ -1,6 +1,7 @@
 import base64
 from typing import Any
 
+import aiohttp
 from celeste_core import ImageArtifact
 from celeste_core.base.image_generator import BaseImageGenerator
 from celeste_core.config.settings import settings
@@ -19,14 +20,16 @@ class OpenAIImageGenerator(BaseImageGenerator):
         """
         Generate images using OpenAI's image generation API.
         """
-        # Force b64_json for reliability and consistency
-        kwargs["response_format"] = "b64_json"
-
+        kwargs.setdefault("response_format", "b64_json")
         response = await self.client.images.generate(model=self.model, prompt=prompt, **kwargs)
 
         images: list[ImageArtifact] = []
         for img_data in response.data:
-            image_bytes = base64.b64decode(img_data.b64_json)
+            if hasattr(img_data, "b64_json") and img_data.b64_json:
+                image_bytes = base64.b64decode(img_data.b64_json)
+            else:
+                async with aiohttp.ClientSession() as session, session.get(img_data.url) as resp:
+                    image_bytes = await resp.read()
 
             metadata = {"model": self.model, **kwargs}
             if img_data.revised_prompt:
