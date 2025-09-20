@@ -19,9 +19,6 @@ class OpenAIImageGenerator(BaseImageGenerator):
         """
         Generate images using OpenAI's image generation API.
         """
-        # Force b64_json for reliability and consistency
-        kwargs["response_format"] = "b64_json"
-
         response = await self.client.images.generate(model=self.model, prompt=prompt, **kwargs)
 
         images: list[ImageArtifact] = []
